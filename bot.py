@@ -1,17 +1,17 @@
 import logging
 import os
-from anthropic import AsyncAnthropic
+from openai import AsyncOpenAI
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
 logging.basicConfig(level=logging.INFO)
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8621586893:AAEDvHWz2zPBYxi7qCD63ZI6_2txPBHe-6g")
-KIE_API_KEY = os.environ.get("KIE_API_KEY", "78ab49cc731accab5c12f7aa89e261b5")
+DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "sk-4aa24046ea664d249b96f9ed68cfa781")
 
-client = AsyncAnthropic(
-    api_key=KIE_API_KEY,
-    base_url="https://api.kie.ai"
+client = AsyncOpenAI(
+    api_key=DEEPSEEK_API_KEY,
+    base_url="https://api.deepseek.com"
 )
 
 SYSTEM_PROMPT = """Ты — умный менеджер по продажам компании «Красная Печать» из Омска. Вы занимаетесь свадебной полиграфией.
@@ -23,7 +23,7 @@ SYSTEM_PROMPT = """Ты — умный менеджер по продажам к
 - Карточки рассадки
 - Холсты из фотографий
 - Бонбоньерки (подарки гостям)
-- Или что-то несколько сразу
+- Или несколько сразу
 
 ШАГ 2. Уточни детали по каждой позиции:
 - Количество штук
@@ -148,16 +148,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.chat.send_action("typing")
 
     try:
-        reply = ""
-        async with client.messages.stream(
-            model="claude-sonnet-4-5",
-            max_tokens=1000,
-            system=SYSTEM_PROMPT,
-            messages=user_histories[user_id]
-        ) as stream:
-            async for text_chunk in stream.text_stream:
-                reply += text_chunk
-
+        response = await client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[{"role": "system", "content": SYSTEM_PROMPT}] + user_histories[user_id],
+            max_tokens=1000
+        )
+        reply = response.choices[0].message.content
         user_histories[user_id].append({"role": "assistant", "content": reply})
 
         await update.message.reply_text(
