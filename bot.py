@@ -3,34 +3,34 @@ import os
 from openai import AsyncOpenAI
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
-
+ 
 logging.basicConfig(level=logging.INFO)
-
+ 
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8621586893:AAEDvHWz2zPBYxi7qCD63ZI6_2txPBHe-6g")
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "sk-4aa24046ea664d249b96f9ed68cfa781")
-
+ 
 client = AsyncOpenAI(
     api_key=DEEPSEEK_API_KEY,
     base_url="https://api.deepseek.com"
 )
-
+ 
 SYSTEM_PROMPT = """Твоё имя — Дима. Ты — ИИ-помощник компании «Красная Печать» из Омска. Вы занимаетесь свадебной полиграфией.
-
+ 
 Твоя задача — провести клиента по воронке продаж:
-
+ 
 ШАГ 1. Поздоровайся, представься что тебя зовут Дима и ты ИИ-помощник компании «Красная Печать», и спроси что нужно клиенту. Узнай какие именно позиции его интересуют:
 - Пригласительные
 - Карточки рассадки
 - Холсты из фотографий
 - Бонбоньерки (подарки гостям)
 - Или несколько сразу
-
+ 
 ШАГ 2. Уточни детали по каждой позиции:
 - Количество штук
 - Дата свадьбы (чтобы понять срочность)
 - Пожелания по стилю и цвету
 - Нужен ли индивидуальный дизайн или подойдёт готовый шаблон
-
+ 
 ШАГ 3. Рассчитай стоимость исходя из потребностей клиента. Используй эти базовые цены (клиенту их не показывай — только итоговую сумму):
 - Пригласительные: от 80 руб/шт, минимальная сумма заказа 2000 руб
 - Карточки рассадки: от 40 руб/шт
@@ -38,47 +38,49 @@ SYSTEM_PROMPT = """Твоё имя — Дима. Ты — ИИ-помощник 
 - Бонбоньерки крафт: от 60 руб/шт, атласный мешочек: от 80 руб/шт, тубус: от 95 руб/шт
 - Индивидуальный дизайн макета: +1000 руб
 Срок изготовления: 5-10 рабочих дней. Доставка по России — СДЭК или Почта России, самовывоз в Омске.
-
+ 
 ШАГ 4. Озвучь итоговую стоимость красиво и понятно. Например:
 "Для вас получается: 50 пригласительных + карточки рассадки = 6 500 руб. Доставка рассчитывается отдельно по вашему городу."
-
+ 
 ШАГ 5. Спроси — всё ли устраивает? Если клиент согласен — скажи что передашь заявку менеджеру, он свяжется в ближайшее время для уточнения деталей и пришлёт ссылку на оплату.
-
+ 
 Правила общения:
 - Говори дружелюбно и тепло. Если клиент спросит кто ты — честно скажи что ты ИИ-помощник компании «Красная Печать», но заверь что все вопросы решишь и при необходимости передашь живому менеджеру
 - Не перегружай клиента вопросами — задавай по 1-2 вопроса за раз
 - Если клиент сомневается — помоги с выбором, предложи что обычно берут другие пары
 - Никогда не показывай прайс списком — только итоговую сумму после выяснения потребностей"""
-
+ 
 user_histories = {}
-
+ 
 MAIN_MENU = InlineKeyboardMarkup([
     [InlineKeyboardButton("💬 Рассчитать стоимость", callback_data="chat")],
     [InlineKeyboardButton("❓ Частые вопросы", callback_data="faq")],
     [InlineKeyboardButton("🎓 Курс полиграфии на дому", callback_data="course")],
 ])
-
+ 
 BACK = InlineKeyboardMarkup([
     [InlineKeyboardButton("← Назад в меню", callback_data="main")]
 ])
-
+ 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user_histories[user_id] = []
     await update.message.reply_text(
-        "👋 Добро пожаловать в *Красная Печать* — свадебная полиграфия из Омска!\n\n"
-        "Мы создаём пригласительные, карточки рассадки, холсты и бонбоньерки для вашего особенного дня.\n\n"
-        "Выберите что вас интересует:",
-        parse_mode="Markdown",
+        "Привет! Меня зовут Дима — я ИИ-помощник компании «Красная Печать» 🤖\n\n"
+        "Помогу подобрать свадебную полиграфию и рассчитаю стоимость. "
+        "Если понадобится живой менеджер — сразу передам!"
+    )
+    await update.message.reply_text(
+        "Вот что я умею — выбирайте:",
         reply_markup=MAIN_MENU
     )
-
+ 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
     user_id = query.from_user.id
-
+ 
     if data == "main":
         user_histories[user_id] = []
         await query.edit_message_text(
@@ -87,7 +89,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown",
             reply_markup=MAIN_MENU
         )
-
+ 
     elif data == "chat":
         user_histories[user_id] = []
         await query.edit_message_text(
@@ -97,7 +99,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Расскажите — что вы планируете заказать?",
             reply_markup=BACK
         )
-
+ 
     elif data == "faq":
         await query.edit_message_text(
             "❓ *Частые вопросы*\n\n"
@@ -117,7 +119,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown",
             reply_markup=BACK
         )
-
+ 
     elif data == "course":
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("💳 Оплатить 9 900 руб", url="https://yoomoney.ru/to/ВСТАВЬ_КОШЕЛЁК")],
@@ -137,18 +139,18 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown",
             reply_markup=keyboard
         )
-
+ 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text
-
+ 
     if user_id not in user_histories:
         user_histories[user_id] = []
-
+ 
     user_histories[user_id].append({"role": "user", "content": text})
-
+ 
     await update.message.chat.send_action("typing")
-
+ 
     try:
         response = await client.chat.completions.create(
             model="deepseek-chat",
@@ -157,7 +159,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         reply = response.choices[0].message.content
         user_histories[user_id].append({"role": "assistant", "content": reply})
-
+ 
         await update.message.reply_text(
             reply,
             reply_markup=InlineKeyboardMarkup([
@@ -170,13 +172,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Упс, что-то пошло не так. Попробуйте ещё раз или вернитесь в меню.",
             reply_markup=BACK
         )
-
+ 
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.run_polling()
-
+ 
 if __name__ == "__main__":
     main()
+ 
