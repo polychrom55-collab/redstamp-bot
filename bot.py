@@ -248,7 +248,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.error(f"API error: {e}")
         await update.message.reply_text("Что-то пошло не так. Попробуйте ещё раз.", reply_markup=BACK)
 
-async def pre_checkout(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    doc = update.message.document
+    if doc:
+        await update.message.reply_text(f"file_id: `{doc.file_id}`", parse_mode="Markdown")
+        if str(update.effective_chat.id) == OWNER_CHAT_ID:
+            await update.message.reply_text(f"Это твой file_id для прайса:\n`{doc.file_id}`", parse_mode="Markdown")
     await update.pre_checkout_query.answer(ok=True)
 
 async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -305,6 +310,7 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("stats", stats))
     app.add_handler(CallbackQueryHandler(button))
+    app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
     app.add_handler(PreCheckoutQueryHandler(pre_checkout))
     app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
