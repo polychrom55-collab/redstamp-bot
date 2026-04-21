@@ -12,7 +12,27 @@ DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "sk-95303a3c9500400db42c3d
 PAYMENT_TOKEN = os.environ.get("PAYMENT_TOKEN", "390540012:LIVE:94857")
 OWNER_CHAT_ID = os.environ.get("OWNER_CHAT_ID", "8143913122")
 
-ai_client = AsyncOpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
+PRICE_LIST_FILE_ID = "BQACAgIAAxkBAAOkaedhHLLHMb_XGt9oO9sVn3IZWnAAAl6bAAJAuzlLg2SzJGD-hFs7BA"
+
+PRICE_PAGES = [
+    "AgACAgIAAxkDAAOyaedj0az_RWpDxsGhOQ8F7OYoriMAAmIUaxtAuzlLN7yRe3tum0ABAAMCAAN5AAM7BA",
+    "AgACAgIAAxkDAAOzaedj0yEs41Wp0LUd6rryO_CiQ3cAAmMUaxtAuzlLSoarKtlHMwEBAAMCAAN5AAM7BA",
+    "AgACAgIAAxkDAAO0aedj1Pc7e845YGZZZHQFcQ1UhdYAAmQUaxtAuzlLeY2TC1_6DgYBAAMCAAN5AAM7BA",
+    "AgACAgIAAxkDAAO1aedj1gQGKjwenqs6sWYJKPUqcT0AAmUUaxtAuzlLxFh1g-LpEdUBAAMCAAN5AAM7BA",
+    "AgACAgIAAxkDAAO2aedj13ocTYINLtSGRpCGot8TyQ4AAmYUaxtAuzlLyAaxmXEaBuwBAAMCAAN5AAM7BA",
+    "AgACAgIAAxkDAAO3aedj2G_6zbtArZVi62_-BL-ozhMAAmcUaxtAuzlL5PsIet0R8lwBAAMCAAN5AAM7BA",
+    "AgACAgIAAxkDAAO4aedj2isSPIpHjgOI0CSzolfbAb8AAmgUaxtAuzlLK9SpBkz-ofcBAAMCAAN5AAM7BA",
+    "AgACAgIAAxkDAAO5aedj3IW1dmJsRfmm2iQeDlTrneAAAmkUaxtAuzlLrYKwyvosnBYBAAMCAAN5AAM7BA",
+    "AgACAgIAAxkDAAO6aedj3e9Q2K0fGcr3xQjFUFGFsHgAAmoUaxtAuzlLBTlk3-nQml4BAAMCAAN5AAM7BA",
+    "AgACAgIAAxkDAAO7aedj3raz97YtNZDvkjeIwzJA0x0AAmsUaxtAuzlLrAvuxPnQyU4BAAMCAAN5AAM7BA",
+    "AgACAgIAAxkDAAO8aedj4CwM954b5pfYwsaXbuVf2BIAAmwUaxtAuzlLfLhwtrRCGD4BAAMCAAN5AAM7BA",
+    "AgACAgIAAxkDAAO9aedj4Q52FhIt-97qiutBli4eSosAAm4UaxtAuzlLfA8fhhDQa4QBAAMCAAN5AAM7BA",
+]
+
+# Состояние карусели: user_id -> текущая страница
+carousel_page = {}
+
+
 
 SYSTEM_PROMPT = """Твоё имя — Дима. Ты — ИИ-помощник компании «Красная Печать» из Омска. Вы занимаетесь свадебной полиграфией.
 
@@ -51,6 +71,7 @@ reminders = {}
 
 MAIN_MENU = InlineKeyboardMarkup([
     [InlineKeyboardButton("💬 Рассчитать стоимость", callback_data="chat")],
+    [InlineKeyboardButton("📋 Прайс-лист", callback_data="pricelist")],
     [InlineKeyboardButton("❓ Частые вопросы", callback_data="faq")],
     [InlineKeyboardButton("🎓 Курс полиграфии на дому", callback_data="course")],
     [InlineKeyboardButton("📞 Связаться с менеджером", callback_data="manager")],
@@ -91,6 +112,50 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Отлично! Давайте подберём всё что нужно для вашей свадьбы.\n\nНапишите что вас интересует 👇",
             reply_markup=BACK
         )
+
+    elif data == "pricelist":
+        user_id = query.from_user.id
+        carousel_page[user_id] = 0
+        page = 0
+        keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("◀️", callback_data="carousel_prev"),
+                InlineKeyboardButton(f"{page+1} / {len(PRICE_PAGES)}", callback_data="carousel_noop"),
+                InlineKeyboardButton("▶️", callback_data="carousel_next"),
+            ],
+            [InlineKeyboardButton("← В меню", callback_data="main")]
+        ])
+        await context.bot.send_photo(
+            chat_id=query.message.chat_id,
+            photo=PRICE_PAGES[page],
+            reply_markup=keyboard
+        )
+
+    elif data in ("carousel_prev", "carousel_next", "carousel_noop"):
+        user_id = query.from_user.id
+        page = carousel_page.get(user_id, 0)
+        if data == "carousel_next":
+            page = (page + 1) % len(PRICE_PAGES)
+        elif data == "carousel_prev":
+            page = (page - 1) % len(PRICE_PAGES)
+        carousel_page[user_id] = page
+        keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("◀️", callback_data="carousel_prev"),
+                InlineKeyboardButton(f"{page+1} / {len(PRICE_PAGES)}", callback_data="carousel_noop"),
+                InlineKeyboardButton("▶️", callback_data="carousel_next"),
+            ],
+            [InlineKeyboardButton("← В меню", callback_data="main")]
+        ])
+        try:
+            await context.bot.edit_message_media(
+                chat_id=query.message.chat_id,
+                message_id=query.message.message_id,
+                media=__import__('telegram').InputMediaPhoto(media=PRICE_PAGES[page]),
+                reply_markup=keyboard
+            )
+        except Exception as e:
+            logging.error(f"Carousel error: {e}")
 
     elif data == "manager":
         await query.edit_message_text(
