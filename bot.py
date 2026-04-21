@@ -29,8 +29,28 @@ PRICE_PAGES = [
     "AgACAgIAAxkDAAO9aedj4Q52FhIt-97qiutBli4eSosAAm4UaxtAuzlLfA8fhhDQa4QBAAMCAAN5AAM7BA",
 ]
 
+# Названия наборов
+PRICE_NAMES = [
+    "Набор 1 «Тихая гавань» — 540 руб/шт",
+    "Набор 2 «Золотой час» — 610 руб/шт",
+    "Набор 3 «Пир на весь мир» — 490 руб/шт",
+    "Набор 4 «Терракот» — 520 руб/шт",
+    "Набор 5 «Красный бархат» — 670 руб/шт",
+    "Набор 6 «Строгая классика» — 520 руб/шт",
+    "Набор 7 «Ты и я» — 470 руб/шт",
+    "Набор 8 «Привет из детства» — 640 руб/шт",
+    "Набор 9 «Сочная классика» — 750 руб/шт",
+    "Набор 10 «Нежная олива» — 570 руб/шт",
+    "Набор 11 «Любовь спасёт мир» — 480 руб/шт",
+    "Набор 12 «Ничего лишнего» — 280 руб/шт",
+]
+
 # Состояние карусели: user_id -> текущая страница
 carousel_page = {}
+# Выбранный набор: user_id -> номер страницы
+selected_set = {}
+# Режим калькулятора
+calc_mode = {}
 
 
 
@@ -39,10 +59,12 @@ SYSTEM_PROMPT = """Твоё имя — Дима. Ты — ИИ-помощник 
 Твоя задача — провести клиента по воронке продаж:
 
 ШАГ 1. Поздоровайся, представься что тебя зовут Дима и ты ИИ-помощник компании «Красная Печать», и спроси что нужно клиенту:
-- Пригласительные
+- Пригласительные (наборы)
 - Карточки рассадки
 - Холсты из фотографий
 - Бонбоньерки
+
+Если в начале диалога указан конкретный набор (например "[Клиент выбрал: Набор 2 «Золотой час»]") — сразу упомяни его и спроси детали по нему.
 
 ШАГ 2. Уточни детали: количество, дата свадьбы, стиль, нужен ли индивидуальный дизайн.
 Если клиент скидывает фото или говорит о конкретном дизайне — скажи что уточняешь стоимость у менеджера и напиши в конце:
@@ -54,7 +76,21 @@ SYSTEM_PROMPT = """Твоё имя — Дима. Ты — ИИ-помощник 
 ИТОГ: <сумма цифрами>
 СОСТАВ: <краткое описание>
 
-Базовые цены (только для стандарта без инд. дизайна):
+Наборы пригласительных с ценами за штуку (от 4 шт):
+- Набор 1 «Тихая гавань» — 540 руб/шт
+- Набор 2 «Золотой час» — 610 руб/шт
+- Набор 3 «Пир на весь мир» — 490 руб/шт
+- Набор 4 «Терракот» — 520 руб/шт
+- Набор 5 «Красный бархат» — 670 руб/шт
+- Набор 6 «Строгая классика» — 520 руб/шт
+- Набор 7 «Ты и я» — 470 руб/шт
+- Набор 8 «Привет из детства» — 640 руб/шт
+- Набор 9 «Сочная классика» — 750 руб/шт
+- Набор 10 «Нежная олива» — 570 руб/шт
+- Набор 11 «Любовь спасёт мир» — 480 руб/шт
+- Набор 12 «Ничего лишнего» — 280 руб/шт
+
+Базовые цены на остальное:
 - Карточки рассадки: от 40 руб/шт
 - Холст 30х40: от 1200 руб, 40х60: от 1800 руб, Диптих: от 2200 руб
 - Бонбоньерки крафт: от 60 руб/шт, мешочек: от 80 руб/шт, тубус: от 95 руб/шт
@@ -63,18 +99,19 @@ SYSTEM_PROMPT = """Твоё имя — Дима. Ты — ИИ-помощник 
 Правила:
 - Говори дружелюбно и тепло
 - Задавай по 1-2 вопроса за раз
-- Цену на пригласительные — только через хозяина
 - Никогда не показывай прайс списком"""
 
 user_histories = {}
 reminders = {}
 
 MAIN_MENU = InlineKeyboardMarkup([
-    [InlineKeyboardButton("💬 Рассчитать стоимость", callback_data="chat")],
-    [InlineKeyboardButton("📋 Прайс-лист", callback_data="pricelist")],
+    [InlineKeyboardButton("📖 Каталог наборов", callback_data="pricelist")],
+    [InlineKeyboardButton("💬 Подобрать набор", callback_data="chat")],
+    [InlineKeyboardButton("🧮 Калькулятор", callback_data="calc")],
     [InlineKeyboardButton("❓ Частые вопросы", callback_data="faq")],
     [InlineKeyboardButton("🎓 Курс полиграфии на дому", callback_data="course")],
-    [InlineKeyboardButton("📞 Связаться с менеджером", callback_data="manager")],
+    [InlineKeyboardButton("📍 О нас", callback_data="about")],
+    [InlineKeyboardButton("📞 Связаться с менеджером", url="https://t.me/redstamp55")],
 ])
 
 BACK = InlineKeyboardMarkup([[InlineKeyboardButton("← Назад в меню", callback_data="main")]])
@@ -123,6 +160,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 InlineKeyboardButton(f"{page+1} / {len(PRICE_PAGES)}", callback_data="carousel_noop"),
                 InlineKeyboardButton("▶️", callback_data="carousel_next"),
             ],
+            [InlineKeyboardButton("💬 Хочу этот набор!", callback_data="want_set")],
             [InlineKeyboardButton("← В меню", callback_data="main")]
         ])
         await context.bot.send_photo(
@@ -139,12 +177,14 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif data == "carousel_prev":
             page = (page - 1) % len(PRICE_PAGES)
         carousel_page[user_id] = page
+        is_last = page == len(PRICE_PAGES) - 1
         keyboard = InlineKeyboardMarkup([
             [
                 InlineKeyboardButton("◀️", callback_data="carousel_prev"),
                 InlineKeyboardButton(f"{page+1} / {len(PRICE_PAGES)}", callback_data="carousel_noop"),
                 InlineKeyboardButton("▶️", callback_data="carousel_next"),
             ],
+            [InlineKeyboardButton("💬 Хочу этот набор!", callback_data="want_set")],
             [InlineKeyboardButton("← В меню", callback_data="main")]
         ])
         try:
@@ -154,12 +194,63 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 media=__import__('telegram').InputMediaPhoto(media=PRICE_PAGES[page]),
                 reply_markup=keyboard
             )
+            if is_last:
+                await context.bot.send_message(
+                    chat_id=query.message.chat_id,
+                    text="Посмотрели все наборы? 😊\n\nЕсли понравился какой-то — нажмите кнопку ниже и Дима поможет рассчитать стоимость!",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("💬 Подобрать набор", callback_data="chat")]
+                    ])
+                )
         except Exception as e:
             logging.error(f"Carousel error: {e}")
 
-    elif data == "manager":
+    elif data == "want_set":
+        user_id = query.from_user.id
+        page = carousel_page.get(user_id, 0)
+        selected_set[user_id] = page
+        set_name = PRICE_NAMES[page]
+        user_histories[user_id] = [
+            {"role": "user", "content": f"[Клиент выбрал: {set_name}]"}
+        ]
+        await query.answer()
+        # Отправляем фото набора + начинаем диалог
+        await context.bot.send_photo(
+            chat_id=query.message.chat_id,
+            photo=PRICE_PAGES[page],
+            caption=f"Отличный выбор! {set_name.split('—')[0].strip()} 💍\n\nДима уже готов помочь с деталями 👇"
+        )
+        # Генерируем первое сообщение Димы
+        response = await ai_client.chat.completions.create(
+            model="deepseek-chat",
+            max_tokens=500,
+            messages=[{"role": "system", "content": SYSTEM_PROMPT}] + user_histories[user_id]
+        )
+        reply = response.choices[0].message.content
+        user_histories[user_id].append({"role": "assistant", "content": reply})
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text=reply,
+            reply_markup=BACK
+        )
+
+    elif data == "calc":
+        user_id = query.from_user.id
+        calc_mode[user_id] = True
         await query.edit_message_text(
-            "📞 Связаться с менеджером\n\nНапишите нам напрямую — ответим в ближайшее время!\n\n👉 @Redstamp_bot",
+            "🧮 Калькулятор\n\n"
+            "Введите количество гостей — и я подберу подходящие наборы и посчитаю примерную стоимость!\n\n"
+            "Напишите число 👇",
+            reply_markup=BACK
+        )
+
+    elif data == "about":
+        await query.edit_message_text(
+            "📍 О нас\n\n"
+            "Красная Печать — студия свадебной полиграфии из Омска.\n\n"
+            "Мы создаём пригласительные, карточки рассадки, холсты и бонбоньерки — всё что делает вашу свадьбу особенной.\n\n"
+            "Работаем по всей России. Доставка через СДЭК и Почту России, самовывоз в Омске.\n\n"
+            "Минимальный заказ от 1 штуки. Срок изготовления 5-10 рабочих дней.",
             reply_markup=BACK
         )
 
@@ -242,6 +333,49 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             logging.error(e)
             await update.message.reply_text("Ошибка. Формат: ЦЕНА: 5000 клиент: 123456789")
+        return
+
+    # Калькулятор
+    if calc_mode.get(user_id):
+        calc_mode.pop(user_id, None)
+        try:
+            guests = int("".join(filter(str.isdigit, text)))
+            if guests < 4:
+                await update.message.reply_text(
+                    "Минимальный заказ — от 4 штук.\nВведите количество гостей от 4:",
+                    reply_markup=BACK
+                )
+                calc_mode[user_id] = True
+                return
+
+            budget = sorted(PRICE_NAMES, key=lambda x: int(x.split("—")[1].replace("руб/шт", "").strip()))
+            cheap = budget[0]
+            mid = budget[len(budget)//2]
+            prem = budget[-1]
+
+            def price(name, qty):
+                p = int(name.split("—")[1].replace("руб/шт", "").strip())
+                return p * qty
+
+            await update.message.reply_text(
+                f"🧮 Расчёт для {guests} гостей:\n\n"
+                f"💚 Бюджетный вариант\n{cheap.split('—')[0].strip()}\n"
+                f"Стоимость: {price(cheap, guests):,} руб\n\n"
+                f"💛 Средний вариант\n{mid.split('—')[0].strip()}\n"
+                f"Стоимость: {price(mid, guests):,} руб\n\n"
+                f"❤️ Премиум вариант\n{prem.split('—')[0].strip()}\n"
+                f"Стоимость: {price(prem, guests):,} руб\n\n"
+                f"Цены указаны за пригласительные. Карточки рассадки, бонбоньерки и доставка рассчитываются отдельно.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("💬 Подобрать набор с Димой", callback_data="chat")],
+                    [InlineKeyboardButton("📖 Посмотреть каталог", callback_data="pricelist")],
+                    [InlineKeyboardButton("← В меню", callback_data="main")],
+                ])
+            )
+        except Exception as e:
+            logging.error(e)
+            await update.message.reply_text("Введите просто число, например: 50", reply_markup=BACK)
+            calc_mode[user_id] = True
         return
 
     if user_id not in user_histories:
