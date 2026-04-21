@@ -12,6 +12,8 @@ DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "sk-95303a3c9500400db42c3d
 PAYMENT_TOKEN = os.environ.get("PAYMENT_TOKEN", "390540012:LIVE:94857")
 OWNER_CHAT_ID = os.environ.get("OWNER_CHAT_ID", "8143913122")
 
+ai_client = AsyncOpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
+
 PRICE_LIST_FILE_ID = "BQACAgIAAxkBAAOkaedhHLLHMb_XGt9oO9sVn3IZWnAAAl6bAAJAuzlLg2SzJGD-hFs7BA"
 
 PRICE_PAGES = [
