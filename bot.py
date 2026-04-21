@@ -17,11 +17,7 @@ PAYMENT_TOKEN = os.environ.get("PAYMENT_TOKEN", "390540012:LIVE:94857")
 OWNER_CHAT_ID = os.environ.get("OWNER_CHAT_ID", "8143913122")
 SHEET_ID = os.environ.get("SHEET_ID", "1CGIKc4wW59NS6zS2dmgt17r7cMoTTU3Op8yZ2c0BkMc")
 
-_creds_json = os.environ.get("GOOGLE_CREDS_JSON", "")
-if _creds_json:
-    GOOGLE_CREDS = json.loads(_creds_json)
-else:
-    GOOGLE_CREDS = {
+GOOGLE_CREDS = {
     "type": "service_account",
     "project_id": "eng-throne-494008-c3",
     "private_key_id": "12716e2c59c761ac73e512159588df38727a2037",
@@ -45,9 +41,7 @@ def get_sheet():
 
 def init_sheets():
     try:
-        logging.info("Connecting to Google Sheets...")
         sh = get_sheet()
-        logging.info("Connected! Opening sheets...")
         # Лист клиентов
         try:
             ws = sh.worksheet("Клиенты")
