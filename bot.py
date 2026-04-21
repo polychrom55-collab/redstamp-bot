@@ -3,7 +3,7 @@ import os
 import json
 import asyncio
 from datetime import datetime, timedelta
-from anthropic import AsyncAnthropic
+from openai import AsyncOpenAI
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, PreCheckoutQueryHandler, filters, ContextTypes
 import gspread
@@ -12,7 +12,7 @@ from google.oauth2.service_account import Credentials
 logging.basicConfig(level=logging.INFO)
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8621586893:AAEDvHWz2zPBYxi7qCD63ZI6_2txPBHe-6g")
-KIE_API_KEY = os.environ.get("KIE_API_KEY", "78ab49cc731accab5c12f7aa89e261b5")
+DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "sk-95303a3c9500400db42c3d3caf559387")
 PAYMENT_TOKEN = os.environ.get("PAYMENT_TOKEN", "390540012:LIVE:94857")
 OWNER_CHAT_ID = os.environ.get("OWNER_CHAT_ID", "8143913122")
 SHEET_ID = os.environ.get("SHEET_ID", "1CGIKc4wW59NS6zS2dmgt17r7cMoTTU3Op8yZ2c0BkMc")
@@ -126,7 +126,7 @@ def cancel_reminder(user_id):
     reminders.pop(user_id, None)
 
 # --- AI клиент ---
-ai_client = AsyncAnthropic(api_key=KIE_API_KEY, base_url="https://api.kie.ai")
+ai_client = AsyncOpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
 
 SYSTEM_PROMPT = """Твоё имя — Дима. Ты — ИИ-помощник компании «Красная Печать» из Омска. Вы занимаетесь свадебной полиграфией.
 
@@ -276,13 +276,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "role": "user",
                     "content": f"[ОТ ХОЗЯИНА]: Цена — {price} руб. Озвучь клиенту итоговую сумму."
                 })
-                reply = ""
-                async with ai_client.messages.stream(
-                    model="claude-sonnet-4-5", max_tokens=500,
-                    system=SYSTEM_PROMPT, messages=user_histories[client_id]
-                ) as stream:
-                    async for chunk in stream.text_stream:
-                        reply += chunk
+                response = await ai_client.chat.completions.create(
+                    model="deepseek-chat",
+                    max_tokens=500,
+                    messages=[{"role": "system", "content": SYSTEM_PROMPT}] + user_histories[client_id]
+                )
+                reply = response.choices[0].message.content
                 user_histories[client_id].append({"role": "assistant", "content": reply})
                 await context.bot.send_message(chat_id=client_id, text=reply)
                 set_reminder(client_id, 24, "followup")
@@ -304,12 +303,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         reply = ""
-        async with ai_client.messages.stream(
-            model="claude-sonnet-4-5", max_tokens=1000,
-            system=SYSTEM_PROMPT, messages=user_histories[user_id]
-        ) as stream:
-            async for chunk in stream.text_stream:
-                reply += chunk
+        response = await ai_client.chat.completions.create(
+            model="deepseek-chat",
+            max_tokens=1000,
+            messages=[{"role": "system", "content": SYSTEM_PROMPT}] + user_histories[user_id]
+        )
+        reply = response.choices[0].message.content
 
         user_histories[user_id].append({"role": "assistant", "content": reply})
 
