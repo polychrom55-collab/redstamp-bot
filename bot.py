@@ -419,7 +419,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     description = line.replace("СОСТАВ:", "").strip()
                 else:
                     clean_reply += line + "\n"
-            await update.message.reply_text(clean_reply.strip())
+            if clean_reply.strip():
+                await update.message.reply_text(clean_reply.strip())
             if amount and amount >= 100:
                 reminders.pop(user_id, None)
                 await context.bot.send_message(
