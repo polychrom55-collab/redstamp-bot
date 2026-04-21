@@ -251,7 +251,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
     doc = update.message.document
     if doc:
-        await update.message.reply_text(f"file_id: `{doc.file_id}`", parse_mode="Markdown")
+        await update.message.reply_text(f"file_id: {doc.file_id}")
 
 async def pre_checkout(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.pre_checkout_query.answer(ok=True)
