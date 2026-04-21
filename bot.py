@@ -252,8 +252,8 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
     doc = update.message.document
     if doc:
         await update.message.reply_text(f"file_id: `{doc.file_id}`", parse_mode="Markdown")
-        if str(update.effective_chat.id) == OWNER_CHAT_ID:
-            await update.message.reply_text(f"Это твой file_id для прайса:\n`{doc.file_id}`", parse_mode="Markdown")
+
+async def pre_checkout(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.pre_checkout_query.answer(ok=True)
 
 async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
