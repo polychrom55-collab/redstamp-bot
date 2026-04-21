@@ -56,25 +56,24 @@ calc_mode = {}
 
 SYSTEM_PROMPT = """Твоё имя — Дима. Ты — ИИ-помощник компании «Красная Печать» из Омска. Вы занимаетесь свадебной полиграфией.
 
-Твоя задача — провести клиента по воронке продаж:
+Если в начале диалога указан выбранный набор — ты уже знаешь что хочет клиент. Твоя задача:
 
-ШАГ 1. Поздоровайся, представься что тебя зовут Дима и ты ИИ-помощник компании «Красная Печать», и спроси что нужно клиенту:
+ШАГ 1. Клиент уже ответил сколько штук — посчитай итоговую сумму (цена за штуку × количество) и уточни:
+- Дату свадьбы (чтобы понять срочность)
+- Нужна ли карточка рассадки или бонбоньерки в дополнение
+
+ШАГ 2. Когда всё выяснено — озвучь итог красиво:
+"Итого: 50 пригласительных набор «Тихая гавань» = 27 000 руб. Срок — 5-10 рабочих дней. Доставка рассчитывается отдельно."
+
+ШАГ 3. Спроси — всё устраивает? Если да — напиши в конце:
+ИТОГ: <сумма цифрами>
+СОСТАВ: <краткое описание>
+
+Если клиент пишет просто без выбранного набора — спроси что его интересует:
 - Пригласительные (наборы)
 - Карточки рассадки
 - Холсты из фотографий
 - Бонбоньерки
-
-Если в начале диалога указан конкретный набор (например "[Клиент выбрал: Набор 2 «Золотой час»]") — сразу упомяни его и спроси детали по нему.
-
-ШАГ 2. Уточни детали: количество, дата свадьбы, стиль, нужен ли индивидуальный дизайн.
-Если клиент скидывает фото или говорит о конкретном дизайне — скажи что уточняешь стоимость у менеджера и напиши в конце:
-СПРОСИ_ХОЗЯИНА: <что именно хочет клиент и сколько штук>
-
-ШАГ 3. Когда хозяин сообщит цену через "ЦЕНА: 5000" — используй её и озвучь клиенту итог.
-
-ШАГ 4. Когда клиент согласен — напиши в конце:
-ИТОГ: <сумма цифрами>
-СОСТАВ: <краткое описание>
 
 Наборы пригласительных с ценами за штуку (от 4 шт):
 - Набор 1 «Тихая гавань» — 540 руб/шт
@@ -106,12 +105,11 @@ reminders = {}
 
 MAIN_MENU = InlineKeyboardMarkup([
     [InlineKeyboardButton("📖 Каталог наборов", callback_data="pricelist")],
-    [InlineKeyboardButton("💬 Подобрать набор", callback_data="chat")],
     [InlineKeyboardButton("🧮 Калькулятор", callback_data="calc")],
     [InlineKeyboardButton("❓ Частые вопросы", callback_data="faq")],
-    [InlineKeyboardButton("🎓 Курс полиграфии на дому", callback_data="course")],
     [InlineKeyboardButton("📍 О нас", callback_data="about")],
     [InlineKeyboardButton("📞 Связаться с менеджером", url="https://t.me/redstamp55")],
+    [InlineKeyboardButton("🎓 Курс полиграфии на дому", callback_data="course")],
 ])
 
 BACK = InlineKeyboardMarkup([[InlineKeyboardButton("← Назад в меню", callback_data="main")]])
@@ -210,27 +208,28 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         page = carousel_page.get(user_id, 0)
         selected_set[user_id] = page
         set_name = PRICE_NAMES[page]
+        set_price = int(set_name.split("—")[1].replace("руб/шт", "").strip())
+
         user_histories[user_id] = [
-            {"role": "user", "content": f"[Клиент выбрал: {set_name}]"}
+            {
+                "role": "user",
+                "content": f"[Клиент выбрал: {set_name}. Цена за штуку: {set_price} руб. Минимум от 4 шт.]"
+            },
+            {
+                "role": "assistant",
+                "content": f"Отличный выбор! {set_name.split('—')[0].strip()} — один из наших любимых наборов 💍\n\nСколько пригласительных вам нужно?"
+            }
         ]
+
         await query.answer()
-        # Отправляем фото набора + начинаем диалог
         await context.bot.send_photo(
             chat_id=query.message.chat_id,
             photo=PRICE_PAGES[page],
-            caption=f"Отличный выбор! {set_name.split('—')[0].strip()} 💍\n\nДима уже готов помочь с деталями 👇"
+            caption=f"Отличный выбор! {set_name.split('—')[0].strip()} 💍"
         )
-        # Генерируем первое сообщение Димы
-        response = await ai_client.chat.completions.create(
-            model="deepseek-chat",
-            max_tokens=500,
-            messages=[{"role": "system", "content": SYSTEM_PROMPT}] + user_histories[user_id]
-        )
-        reply = response.choices[0].message.content
-        user_histories[user_id].append({"role": "assistant", "content": reply})
         await context.bot.send_message(
             chat_id=query.message.chat_id,
-            text=reply,
+            text="Сколько пригласительных вам нужно?",
             reply_markup=BACK
         )
 
@@ -268,6 +267,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data == "course":
         keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🌐 Подробнее о курсе", url="https://polychrom55-collab.github.io/Obuchenie")],
             [InlineKeyboardButton("💳 Оплатить 9 900 руб", callback_data="pay_course")],
             [InlineKeyboardButton("← Назад", callback_data="main")],
         ])
@@ -348,27 +348,40 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 calc_mode[user_id] = True
                 return
 
-            budget = sorted(PRICE_NAMES, key=lambda x: int(x.split("—")[1].replace("руб/шт", "").strip()))
-            cheap = budget[0]
-            mid = budget[len(budget)//2]
-            prem = budget[-1]
+            budget = sorted(range(len(PRICE_NAMES)), key=lambda i: int(PRICE_NAMES[i].split("—")[1].replace("руб/шт", "").strip()))
+            cheap_i = budget[0]
+            mid_i = budget[len(budget)//2]
+            prem_i = budget[-1]
 
-            def price(name, qty):
-                p = int(name.split("—")[1].replace("руб/шт", "").strip())
+            def price(i, qty):
+                p = int(PRICE_NAMES[i].split("—")[1].replace("руб/шт", "").strip())
                 return p * qty
 
+            await update.message.reply_text(f"🧮 Расчёт для {guests} гостей:")
+
+            # Бюджетный
+            await context.bot.send_photo(
+                chat_id=update.message.chat_id,
+                photo=PRICE_PAGES[cheap_i],
+                caption=f"💚 Бюджетный вариант\n{PRICE_NAMES[cheap_i].split('—')[0].strip()}\nСтоимость: {price(cheap_i, guests):,} руб"
+            )
+            # Средний
+            await context.bot.send_photo(
+                chat_id=update.message.chat_id,
+                photo=PRICE_PAGES[mid_i],
+                caption=f"💛 Средний вариант\n{PRICE_NAMES[mid_i].split('—')[0].strip()}\nСтоимость: {price(mid_i, guests):,} руб"
+            )
+            # Премиум
+            await context.bot.send_photo(
+                chat_id=update.message.chat_id,
+                photo=PRICE_PAGES[prem_i],
+                caption=f"❤️ Премиум вариант\n{PRICE_NAMES[prem_i].split('—')[0].strip()}\nСтоимость: {price(prem_i, guests):,} руб"
+            )
+
             await update.message.reply_text(
-                f"🧮 Расчёт для {guests} гостей:\n\n"
-                f"💚 Бюджетный вариант\n{cheap.split('—')[0].strip()}\n"
-                f"Стоимость: {price(cheap, guests):,} руб\n\n"
-                f"💛 Средний вариант\n{mid.split('—')[0].strip()}\n"
-                f"Стоимость: {price(mid, guests):,} руб\n\n"
-                f"❤️ Премиум вариант\n{prem.split('—')[0].strip()}\n"
-                f"Стоимость: {price(prem, guests):,} руб\n\n"
-                f"Цены указаны за пригласительные. Карточки рассадки, бонбоньерки и доставка рассчитываются отдельно.",
+                "Цены указаны за пригласительные. Карточки рассадки, бонбоньерки и доставка рассчитываются отдельно.",
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("💬 Подобрать набор с Димой", callback_data="chat")],
-                    [InlineKeyboardButton("📖 Посмотреть каталог", callback_data="pricelist")],
+                    [InlineKeyboardButton("📖 Посмотреть весь каталог", callback_data="pricelist")],
                     [InlineKeyboardButton("← В меню", callback_data="main")],
                 ])
             )
@@ -467,8 +480,10 @@ async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE)
     reminders[user_id] = {"send_at": datetime.now() + timedelta(hours=336), "type": "review"}
 
     await update.message.reply_text(
-        f"✅ Оплата {amount} руб получена!\n\nСпасибо! Менеджер свяжется с вами в ближайшее время.",
-        reply_markup=MAIN_MENU
+        f"✅ Оплата {amount} руб получена!\n\nСпасибо! Теперь вас будет сопровождать наш менеджер — он свяжется с вами в ближайшее время для уточнения всех деталей заказа.",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("📞 Написать менеджеру", url="https://t.me/redstamp55")]
+        ])
     )
     await context.bot.send_message(
         chat_id=OWNER_CHAT_ID,
