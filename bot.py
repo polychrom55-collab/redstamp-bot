@@ -45,7 +45,9 @@ def get_sheet():
 
 def init_sheets():
     try:
+        logging.info("Connecting to Google Sheets...")
         sh = get_sheet()
+        logging.info("Connected! Opening sheets...")
         # Лист клиентов
         try:
             ws = sh.worksheet("Клиенты")
