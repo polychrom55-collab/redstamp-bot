@@ -506,23 +506,33 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data == "course":
         keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("🌐 Подробнее о курсе", url="https://polychrom55-collab.github.io/Obuchenie")],
+            [InlineKeyboardButton("📄 PDF: ТОП ОШИБОК НОВИЧКОВ", callback_data="pdf_mistakes")],
+            [InlineKeyboardButton("🌐 Больше информации о курсе", url="https://luminous-bunny-9d26b3.netlify.app")],
             [InlineKeyboardButton("💳 Оплатить 9 900 руб", callback_data="pay_course")],
             [InlineKeyboardButton("← Назад", callback_data="main")],
         ])
         await query.edit_message_text(
-            "🖨 Обучение заработку на свадебной полиграфии — не выходя из дома!\n\n"
-            "📌 С нуля до первых заказов!\n\n"
-            "Что входит:\n"
-            "✅ Основы полиграфии — материалы, печать, отделка, оборудование\n"
-            "✅ Урок по CorelDraw от нашего дизайнера\n"
-            "✅ 10 готовых шаблонов пригласительных\n"
+            "🎓 Курс «Заработок на свадебной полиграфии из дома»\n\n"
+            "Мы обучаем зарабатывать на свадебной полиграфии не выходя из дома — с нуля до первых заказов!\n\n"
+            "Что входит в курс:\n\n"
+            "✅ Основы полиграфии — материалы, печать, отделка, оборудование и его обслуживание\n"
+            "✅ Урок по работе в CorelDraw от нашего дизайнера\n"
+            "✅ База дизайнов и шаблонов пригласительных — 10 готовых шаблонов\n"
             "✅ База шрифтов\n"
-            "✅ Урок по изготовлению — аккуратно и эстетично\n"
-            "✅ Урок по продажам — как зарабатывать, кому и как продавать\n\n"
-            "Бонус! Оплата в течение 24 часов — консультация на 30 минут!",
+            "✅ Отдельный урок по изготовлению пригласительных — аккуратно, красиво и эстетично\n"
+            "✅ Урок по продажам — как зарабатывать, кому и как продавать, как формировать цену\n\n"
+            "💡 Бонус! При оплате в течение 24 часов — личная консультация на 30 минут!\n\n"
+            "Больше информации о курсе на нашем сайте 👇",
             reply_markup=keyboard
         )
+
+    elif data == "pdf_mistakes":
+        await context.bot.send_document(
+            chat_id=query.message.chat_id,
+            document="BQACAgIAAxkBAAIBwGnqD5xB16tOA3jkB0Wb_bniA3YyAAKTmgACDg1QS4C1-YOptWH1OwQ",
+            caption="📄 ТОП ошибок новичков в свадебной полиграфии\n\nИзучи перед стартом — сэкономит время и деньги!"
+        )
+        await query.answer()
 
     elif data == "pay_course":
         await context.bot.send_invoice(
