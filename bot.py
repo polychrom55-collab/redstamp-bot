@@ -253,20 +253,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ])
         )
 
-
-            size_name, price = sizes[data]
-            await query.edit_message_text(
-                f"🖼 Холст {size_name}\n\n"
-                f"💰 Цена: {price:,} руб\n\n"
-                f"📸 Загрузите любую свою фотографию — мы напечатаем холст именно с ней!\n\n"
-                f"Галерейная натяжка на подрамник из крепких пород дерева.\n"
-                f"Срок изготовления: до 3 дней.",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("💬 Заказать этот размер", url="https://t.me/redstamp55")],
-                    [InlineKeyboardButton("← Назад", callback_data="canvases")],
-                ])
-            )
-
     elif data == "gifts":
         await query.edit_message_text(
             "🎁 Подарки гостям\n\nВсё брендированное — делаем открытки и наклейки к любому подарку.\n\nВыберите категорию:",
