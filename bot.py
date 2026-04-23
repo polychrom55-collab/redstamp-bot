@@ -164,7 +164,15 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if data == "main":
         user_histories[user_id] = []
-        await query.edit_message_text("Вот что я умею — выбирайте:", reply_markup=MAIN_MENU)
+        try:
+            await query.edit_message_text("Вот что я умею — выбирайте:", reply_markup=MAIN_MENU)
+        except:
+            await query.message.delete()
+            await context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text="Вот что я умею — выбирайте:",
+                reply_markup=MAIN_MENU
+            )
 
     elif data == "catalog":
         await query.edit_message_text(
@@ -327,11 +335,15 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 InlineKeyboardButton("▶️", callback_data="carousel_next"),
             ],
             [
-                InlineKeyboardButton("❤️ Нравится" if not liked else "💔 Убрать", callback_data="toggle_like"),
+                InlineKeyboardButton("💔 Убрать" if liked else "❤️ Нравится", callback_data="toggle_like"),
                 InlineKeyboardButton("💬 Хочу этот набор!", callback_data="want_set"),
             ],
             [InlineKeyboardButton("← В меню", callback_data="main")]
         ])
+        try:
+            await query.message.delete()
+        except:
+            pass
         await context.bot.send_photo(
             chat_id=query.message.chat_id,
             photo=PRICE_PAGES[page],
