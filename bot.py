@@ -201,6 +201,93 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ])
         )
 
+    elif data.startswith("quick_"):
+        user_id = query.from_user.id
+        await query.answer()
+
+        quick_map = {
+            "quick_20": "20 штук",
+            "quick_30": "30 штук",
+            "quick_50": "50 штук",
+            "quick_70": "70 штук",
+            "quick_100": "100 штук",
+            "quick_seating": "Да, добавьте карточки рассадки в том же стиле",
+            "quick_gifts": "Да, интересуют подарки гостям",
+            "quick_only_invites": "Нет, только пригласительные",
+            "quick_spring": "Весна 2025",
+            "quick_summer": "Лето 2025",
+            "quick_autumn": "Осень 2025",
+            "quick_winter": "Зима 2025",
+            "quick_2026": "2026 год",
+            "quick_style_soft": "Нежный пастельный стиль",
+            "quick_style_classic": "Классический строгий стиль",
+            "quick_style_bright": "Яркий насыщенный стиль",
+            "quick_style_nature": "Природный стиль, ботаника",
+        }
+
+        text = quick_map.get(data, data)
+        await context.bot.send_message(chat_id=query.message.chat_id, text=f"✅ {text}")
+
+        if user_id not in user_histories:
+            user_histories[user_id] = []
+        user_histories[user_id].append({"role": "user", "content": text})
+        await context.bot.send_chat_action(chat_id=query.message.chat_id, action="typing")
+
+        try:
+            response = await ai_client.chat.completions.create(
+                model="deepseek-chat",
+                max_tokens=1000,
+                messages=[{"role": "system", "content": SYSTEM_PROMPT}] + user_histories[user_id]
+            )
+            reply = response.choices[0].message.content
+            user_histories[user_id].append({"role": "assistant", "content": reply})
+
+            if "ИТОГ:" in reply and "СОСТАВ:" in reply:
+                lines = reply.split("\n")
+                amount, description, clean_reply = None, "Заказ свадебной полиграфии", ""
+                for line in lines:
+                    if line.startswith("ИТОГ:"):
+                        try:
+                            amount = int("".join(filter(str.isdigit, line)))
+                        except:
+                            pass
+                    elif line.startswith("СОСТАВ:"):
+                        description = line.replace("СОСТАВ:", "").strip()
+                    else:
+                        clean_reply += line + "\n"
+                if clean_reply.strip():
+                    await context.bot.send_message(chat_id=query.message.chat_id, text=clean_reply.strip())
+                if amount and amount >= 100:
+                    uname = query.from_user.full_name
+                    uusername = query.from_user.username or ""
+                    await context.bot.send_message(
+                        chat_id=OWNER_CHAT_ID,
+                        text=f"📋 Новый заказ!\n\nКлиент: {uname} (@{uusername}, id: {user_id})\nСостав: {description}\nСумма: {amount} руб"
+                    )
+                    await context.bot.send_message(
+                        chat_id=query.message.chat_id,
+                        text="Отлично! Перед оплатой подготовьте данные для макета:\n\n"
+                             "• Имена молодожёнов\n• Дату и время свадьбы\n• Место проведения\n"
+                             "• Дресс-код (если есть)\n• Пожелания по тексту\n\n"
+                             "После оплаты пришлите всё менеджеру @redstamp55 🎨\n\nВыставляю счёт 👇",
+                        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📞 @redstamp55", url="https://t.me/redstamp55")]])
+                    )
+                    await context.bot.send_invoice(
+                        chat_id=query.message.chat_id,
+                        title="Заказ — Красная Печать",
+                        description=description,
+                        payload=f"order_{user_id}",
+                        provider_token=PAYMENT_TOKEN,
+                        currency="RUB",
+                        prices=[LabeledPrice("Оплата заказа 100%", amount * 100)],
+                        need_name=True, need_phone_number=True,
+                    )
+            else:
+                keyboard = get_smart_buttons(reply, user_histories[user_id])
+                await context.bot.send_message(chat_id=query.message.chat_id, text=reply, reply_markup=keyboard)
+        except Exception as e:
+            logging.error(f"Quick reply error: {e}")
+
     elif data.startswith("canvas_"):
         sizes = {
             "canvas_20x30": ("20×30 см", 1652),
@@ -344,11 +431,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.delete()
         except:
             pass
-        await context.bot.send_photo(
-            chat_id=query.message.chat_id,
-            photo=PRICE_PAGES[page],
-            reply_markup=keyboard
-        )
         await context.bot.send_photo(
             chat_id=query.message.chat_id,
             photo=PRICE_PAGES[page],
@@ -597,7 +679,58 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ])
         )
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def get_smart_buttons(reply: str, history: list) -> InlineKeyboardMarkup:
+    """Подбирает кнопки-подсказки в зависимости от контекста диалога"""
+    reply_lower = reply.lower()
+    history_text = " ".join([m["content"].lower() for m in history[-4:]])
+
+    # Вопрос о количестве
+    if any(w in reply_lower for w in ["сколько", "количество", "штук", "экземпляр"]):
+        return InlineKeyboardMarkup([
+            [InlineKeyboardButton("20 шт", callback_data="quick_20"),
+             InlineKeyboardButton("30 шт", callback_data="quick_30"),
+             InlineKeyboardButton("50 шт", callback_data="quick_50")],
+            [InlineKeyboardButton("70 шт", callback_data="quick_70"),
+             InlineKeyboardButton("100 шт", callback_data="quick_100")],
+            [InlineKeyboardButton("← В меню", callback_data="main")],
+        ])
+
+    # Вопрос о доп товарах
+    if any(w in reply_lower for w in ["карточки рассадки", "подарки", "бонбоньерки", "дополнительно", "что-то ещё", "ещё что"]):
+        return InlineKeyboardMarkup([
+            [InlineKeyboardButton("✅ Да, карточки рассадки", callback_data="quick_seating")],
+            [InlineKeyboardButton("🎁 Да, подарки гостям", callback_data="quick_gifts")],
+            [InlineKeyboardButton("❌ Нет, только пригласительные", callback_data="quick_only_invites")],
+            [InlineKeyboardButton("← В меню", callback_data="main")],
+        ])
+
+    # Вопрос о дате
+    if any(w in reply_lower for w in ["дата", "когда свадьба", "дату", "месяц"]):
+        return InlineKeyboardMarkup([
+            [InlineKeyboardButton("Весна 2025", callback_data="quick_spring"),
+             InlineKeyboardButton("Лето 2025", callback_data="quick_summer")],
+            [InlineKeyboardButton("Осень 2025", callback_data="quick_autumn"),
+             InlineKeyboardButton("Зима 2025", callback_data="quick_winter")],
+            [InlineKeyboardButton("2026", callback_data="quick_2026"),
+             InlineKeyboardButton("← В меню", callback_data="main")],
+        ])
+
+    # Вопрос о стиле
+    if any(w in reply_lower for w in ["стиль", "цвет", "оформление", "тематик"]):
+        return InlineKeyboardMarkup([
+            [InlineKeyboardButton("Нежный/пастельный", callback_data="quick_style_soft")],
+            [InlineKeyboardButton("Классический/строгий", callback_data="quick_style_classic")],
+            [InlineKeyboardButton("Яркий/насыщенный", callback_data="quick_style_bright")],
+            [InlineKeyboardButton("Природный/ботаника", callback_data="quick_style_nature")],
+            [InlineKeyboardButton("← В меню", callback_data="main")],
+        ])
+
+    # По умолчанию
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("← В меню", callback_data="main")]
+    ])
+
+
     user_id = update.effective_user.id
     name = update.effective_user.full_name
     username = update.effective_user.username or ""
@@ -766,10 +899,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     need_name=True, need_phone_number=True,
                 )
         else:
-            await update.message.reply_text(
-                reply,
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("← В меню", callback_data="main")]])
-            )
+            keyboard = get_smart_buttons(reply, user_histories[user_id])
+            await update.message.reply_text(reply, reply_markup=keyboard)
 
     except Exception as e:
         logging.error(f"API error: {e}")
