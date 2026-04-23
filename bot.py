@@ -129,6 +129,8 @@ MAIN_MENU = InlineKeyboardMarkup([
 
 # Лайки: user_id -> set(номеров страниц)
 user_likes = {}
+
+CATALOG_MENU = InlineKeyboardMarkup([
     [InlineKeyboardButton("✉️ Пригласительные", callback_data="pricelist")],
     [InlineKeyboardButton("🖼 Холсты и звёздные карты", callback_data="canvases")],
     [InlineKeyboardButton("🎁 Подарки гостям", callback_data="gifts")],
