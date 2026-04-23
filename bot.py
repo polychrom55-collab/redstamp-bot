@@ -603,6 +603,11 @@ async def check_reminders(context):
     for uid in to_delete:
         reminders.pop(uid, None)
 
+async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    doc = update.message.document
+    if doc:
+        await update.message.reply_text(f"file_id: {doc.file_id}")
+
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
