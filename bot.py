@@ -118,12 +118,21 @@ user_histories = {}
 reminders = {}
 
 MAIN_MENU = InlineKeyboardMarkup([
-    [InlineKeyboardButton("📖 Каталог наборов", callback_data="pricelist")],
+    [InlineKeyboardButton("📖 Наш каталог", callback_data="catalog")],
+    [InlineKeyboardButton("❤️ Мне понравилось", callback_data="liked")],
     [InlineKeyboardButton("🧮 Калькулятор", callback_data="calc")],
     [InlineKeyboardButton("❓ Частые вопросы", callback_data="faq")],
     [InlineKeyboardButton("📍 О нас", callback_data="about")],
     [InlineKeyboardButton("📞 Связаться с менеджером", url="https://t.me/redstamp55")],
     [InlineKeyboardButton("🎓 Курс полиграфии на дому", callback_data="course")],
+])
+
+# Лайки: user_id -> set(номеров страниц)
+user_likes = {}
+    [InlineKeyboardButton("✉️ Пригласительные", callback_data="pricelist")],
+    [InlineKeyboardButton("🖼 Холсты и звёздные карты", callback_data="canvases")],
+    [InlineKeyboardButton("🎁 Подарки гостям", callback_data="gifts")],
+    [InlineKeyboardButton("← Назад", callback_data="main")],
 ])
 
 BACK = InlineKeyboardMarkup([[InlineKeyboardButton("← Назад в меню", callback_data="main")]])
@@ -155,6 +164,162 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_histories[user_id] = []
         await query.edit_message_text("Вот что я умею — выбирайте:", reply_markup=MAIN_MENU)
 
+    elif data == "catalog":
+        await query.edit_message_text(
+            "📖 Наш каталог\n\nВыберите категорию:",
+            reply_markup=CATALOG_MENU
+        )
+
+    elif data == "canvases":
+        await query.edit_message_text(
+            "🖼 Холсты и звёздные карты\n\n"
+            "Выберите размер — покажем пример и цену.\n\n"
+            "Вы можете загрузить любую свою фотографию — мы напечатаем холст именно с ней! 📸",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("20×30 см", callback_data="canvas_20x30"),
+                 InlineKeyboardButton("30×30 см", callback_data="canvas_30x30")],
+                [InlineKeyboardButton("30×40 см", callback_data="canvas_30x40"),
+                 InlineKeyboardButton("40×40 см", callback_data="canvas_40x40")],
+                [InlineKeyboardButton("40×50 см", callback_data="canvas_40x50"),
+                 InlineKeyboardButton("50×50 см", callback_data="canvas_50x50")],
+                [InlineKeyboardButton("40×60 см", callback_data="canvas_40x60"),
+                 InlineKeyboardButton("50×60 см", callback_data="canvas_50x60")],
+                [InlineKeyboardButton("60×80 см", callback_data="canvas_60x80"),
+                 InlineKeyboardButton("80×110 см", callback_data="canvas_80x110")],
+                [InlineKeyboardButton("🌟 Звёздная карта", callback_data="starmap")],
+                [InlineKeyboardButton("← Каталог", callback_data="catalog")],
+            ])
+        )
+
+    elif data.startswith("canvas_"):
+        sizes = {
+            "canvas_20x30": ("20×30 см", 1652),
+            "canvas_30x30": ("30×30 см", 1596),
+            "canvas_30x40": ("30×40 см", 2282),
+            "canvas_40x40": ("40×40 см", 2380),
+            "canvas_40x50": ("40×50 см", 2520),
+            "canvas_50x50": ("50×50 см", 2842),
+            "canvas_40x60": ("40×60 см", 3010),
+            "canvas_50x60": ("50×60 см", 3360),
+            "canvas_60x80": ("60×80 см", 3563),
+            "canvas_80x110": ("80×110 см", 6020),
+        }
+    elif data == "starmap":
+        await query.edit_message_text(
+            "🌟 Звёздная карта\n\n"
+            "Карта звёздного неба над вами в момент предложения руки и сердца, "
+            "первого поцелуя, рождения ребёнка или любой важной даты.\n\n"
+            "Вы указываете дату, время и город — мы создаём персональную карту с вашей подписью.\n\n"
+            "Выберите размер:",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("20×30 см", callback_data="starmap_20x30"),
+                 InlineKeyboardButton("30×30 см", callback_data="starmap_30x30")],
+                [InlineKeyboardButton("30×40 см", callback_data="starmap_30x40"),
+                 InlineKeyboardButton("40×40 см", callback_data="starmap_40x40")],
+                [InlineKeyboardButton("40×50 см", callback_data="starmap_40x50"),
+                 InlineKeyboardButton("50×50 см", callback_data="starmap_50x50")],
+                [InlineKeyboardButton("40×60 см", callback_data="starmap_40x60"),
+                 InlineKeyboardButton("50×60 см", callback_data="starmap_50x60")],
+                [InlineKeyboardButton("60×80 см", callback_data="starmap_60x80"),
+                 InlineKeyboardButton("80×110 см", callback_data="starmap_80x110")],
+                [InlineKeyboardButton("← Назад", callback_data="canvases")],
+            ])
+        )
+
+    elif data.startswith("starmap_"):
+        sizes = {
+            "starmap_20x30": ("20×30 см", 1652),
+            "starmap_30x30": ("30×30 см", 1596),
+            "starmap_30x40": ("30×40 см", 2282),
+            "starmap_40x40": ("40×40 см", 2380),
+            "starmap_40x50": ("40×50 см", 2520),
+            "starmap_50x50": ("50×50 см", 2842),
+            "starmap_40x60": ("40×60 см", 3010),
+            "starmap_50x60": ("50×60 см", 3360),
+            "starmap_60x80": ("60×80 см", 3563),
+            "starmap_80x110": ("80×110 см", 6020),
+        }
+        size_name, price = sizes[data]
+        await query.edit_message_text(
+            f"🌟 Звёздная карта {size_name}\n\n"
+            f"💰 Цена: {price:,} руб\n\n"
+            f"Укажите дату, время и город — и мы создадим карту звёздного неба именно для вашего момента ✨\n\n"
+            f"Срок изготовления: до 3 дней.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("💬 Заказать", url="https://t.me/redstamp55")],
+                [InlineKeyboardButton("← Назад", callback_data="starmap")],
+            ])
+        )
+
+
+            size_name, price = sizes[data]
+            await query.edit_message_text(
+                f"🖼 Холст {size_name}\n\n"
+                f"💰 Цена: {price:,} руб\n\n"
+                f"📸 Загрузите любую свою фотографию — мы напечатаем холст именно с ней!\n\n"
+                f"Галерейная натяжка на подрамник из крепких пород дерева.\n"
+                f"Срок изготовления: до 3 дней.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("💬 Заказать этот размер", url="https://t.me/redstamp55")],
+                    [InlineKeyboardButton("← Назад", callback_data="canvases")],
+                ])
+            )
+
+    elif data == "gifts":
+        await query.edit_message_text(
+            "🎁 Подарки гостям\n\nВсё брендированное — делаем открытки и наклейки к любому подарку.\n\nВыберите категорию:",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🍯 Вкусное", callback_data="gifts_food")],
+                [InlineKeyboardButton("✨ Красивое", callback_data="gifts_beauty")],
+                [InlineKeyboardButton("🎯 Полезное", callback_data="gifts_useful")],
+                [InlineKeyboardButton("← Каталог", callback_data="catalog")],
+            ])
+        )
+
+    elif data == "gifts_food":
+        await query.edit_message_text(
+            "🍯 Вкусное\n\n"
+            "Всё с персональной биркой, обёрткой или этикеткой с именами пары.\n\n"
+            "• Мёд в маленьких баночках с именной биркой\n"
+            "• Шоколадки с персональной обёрткой\n"
+            "• Варенье в мини-банках с именной биркой\n"
+            "• Пакетик натурального чёрного чая с фотографией пары\n\n"
+            "Стоимость рассчитывается индивидуально под тираж.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("💬 Узнать стоимость", url="https://t.me/redstamp55")],
+                [InlineKeyboardButton("← Назад", callback_data="gifts")],
+            ])
+        )
+
+    elif data == "gifts_beauty":
+        await query.edit_message_text(
+            "✨ Красивое\n\n"
+            "Всё с монограммой или фото молодожёнов.\n\n"
+            "• Свечи с монограммой — на выбор разные ароматы\n"
+            "• Саше с ароматом — на выбор разные ароматы\n"
+            "• Магниты с фото молодожёнов\n"
+            "  «Спасибо что были с нами в этот день»\n\n"
+            "Стоимость рассчитывается индивидуально под тираж.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("💬 Узнать стоимость", url="https://t.me/redstamp55")],
+                [InlineKeyboardButton("← Назад", callback_data="gifts")],
+            ])
+        )
+
+    elif data == "gifts_useful":
+        await query.edit_message_text(
+            "🎯 Полезное\n\n"
+            "Всё с монограммой и датой свадьбы.\n\n"
+            "• Закладка для книги с монограммой и датой свадьбы\n"
+            "• Мини-блокнот с тиснением монограммы\n"
+            "• Брендированные ручки\n\n"
+            "Стоимость рассчитывается индивидуально под тираж.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("💬 Узнать стоимость", url="https://t.me/redstamp55")],
+                [InlineKeyboardButton("← Назад", callback_data="gifts")],
+            ])
+        )
+
     elif data == "chat":
         user_histories[user_id] = []
         await query.edit_message_text(
@@ -166,13 +331,17 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = query.from_user.id
         carousel_page[user_id] = 0
         page = 0
+        liked = page in user_likes.get(user_id, set())
         keyboard = InlineKeyboardMarkup([
             [
                 InlineKeyboardButton("◀️", callback_data="carousel_prev"),
                 InlineKeyboardButton(f"{page+1} / {len(PRICE_PAGES)}", callback_data="carousel_noop"),
                 InlineKeyboardButton("▶️", callback_data="carousel_next"),
             ],
-            [InlineKeyboardButton("💬 Хочу этот набор!", callback_data="want_set")],
+            [
+                InlineKeyboardButton("❤️ Нравится" if not liked else "💔 Убрать", callback_data="toggle_like"),
+                InlineKeyboardButton("💬 Хочу этот набор!", callback_data="want_set"),
+            ],
             [InlineKeyboardButton("← В меню", callback_data="main")]
         ])
         await context.bot.send_photo(
@@ -180,23 +349,42 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             photo=PRICE_PAGES[page],
             reply_markup=keyboard
         )
+        await context.bot.send_photo(
+            chat_id=query.message.chat_id,
+            photo=PRICE_PAGES[page],
+            reply_markup=keyboard
+        )
 
-    elif data in ("carousel_prev", "carousel_next", "carousel_noop"):
+    elif data in ("carousel_prev", "carousel_next", "carousel_noop", "toggle_like"):
         user_id = query.from_user.id
         page = carousel_page.get(user_id, 0)
-        if data == "carousel_next":
+
+        if data == "toggle_like":
+            likes = user_likes.setdefault(user_id, set())
+            if page in likes:
+                likes.discard(page)
+                await query.answer("Убрано из понравившихся")
+            else:
+                likes.add(page)
+                await query.answer(f"❤️ {PRICE_NAMES[page].split('—')[0].strip()} сохранён!")
+        elif data == "carousel_next":
             page = (page + 1) % len(PRICE_PAGES)
         elif data == "carousel_prev":
             page = (page - 1) % len(PRICE_PAGES)
+
         carousel_page[user_id] = page
         is_last = page == len(PRICE_PAGES) - 1
+        liked = page in user_likes.get(user_id, set())
         keyboard = InlineKeyboardMarkup([
             [
                 InlineKeyboardButton("◀️", callback_data="carousel_prev"),
                 InlineKeyboardButton(f"{page+1} / {len(PRICE_PAGES)}", callback_data="carousel_noop"),
                 InlineKeyboardButton("▶️", callback_data="carousel_next"),
             ],
-            [InlineKeyboardButton("💬 Хочу этот набор!", callback_data="want_set")],
+            [
+                InlineKeyboardButton("💔 Убрать" if liked else "❤️ Нравится", callback_data="toggle_like"),
+                InlineKeyboardButton("💬 Хочу этот набор!", callback_data="want_set"),
+            ],
             [InlineKeyboardButton("← В меню", callback_data="main")]
         ])
         try:
@@ -206,16 +394,38 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 media=__import__('telegram').InputMediaPhoto(media=PRICE_PAGES[page]),
                 reply_markup=keyboard
             )
-            if is_last:
+            if is_last and data != "toggle_like":
                 await context.bot.send_message(
                     chat_id=query.message.chat_id,
-                    text="Посмотрели все наборы? 😊\n\nЕсли понравился какой-то — нажмите кнопку ниже и Дима поможет рассчитать стоимость!",
+                    text="Посмотрели все наборы? 😊\n\nЕсли понравился какой-то — нажмите ❤️ чтобы сохранить, или сразу «Хочу этот набор!»",
                     reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("💬 Подобрать набор", callback_data="chat")]
+                        [InlineKeyboardButton("❤️ Мне понравилось", callback_data="liked")]
                     ])
                 )
         except Exception as e:
             logging.error(f"Carousel error: {e}")
+
+    elif data == "liked":
+        user_id = query.from_user.id
+        likes = user_likes.get(user_id, set())
+        if not likes:
+            await query.answer("Вы ещё ничего не отметили ❤️", show_alert=True)
+            return
+        await query.answer()
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text=f"❤️ Ваши понравившиеся наборы ({len(likes)} шт):"
+        )
+        for page in sorted(likes):
+            await context.bot.send_photo(
+                chat_id=query.message.chat_id,
+                photo=PRICE_PAGES[page],
+                caption=PRICE_NAMES[page],
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("💬 Хочу этот набор!", callback_data="want_set")],
+                ])
+            )
+            carousel_page[user_id] = page
 
     elif data == "want_set":
         user_id = query.from_user.id
@@ -324,6 +534,57 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             currency="RUB",
             prices=[LabeledPrice("Курс «Полиграфия на дому»", 990000)],
             need_name=True, need_phone_number=True,
+        )
+
+    elif data.startswith("canvas_"):
+        sizes = {
+            "canvas_20x30": ("20×30 см", 1652),
+            "canvas_30x30": ("30×30 см", 1596),
+            "canvas_30x40": ("30×40 см", 2282),
+            "canvas_40x40": ("40×40 см", 2380),
+            "canvas_40x50": ("40×50 см", 2520),
+            "canvas_50x50": ("50×50 см", 2842),
+            "canvas_40x60": ("40×60 см", 3010),
+            "canvas_50x60": ("50×60 см", 3360),
+            "canvas_60x80": ("60×80 см", 3563),
+            "canvas_80x110": ("80×110 см", 6020),
+        }
+        size_name, price = sizes.get(data, ("?", 0))
+        await query.edit_message_text(
+            f"🖼 Холст {size_name}\n\n"
+            f"💰 Цена: {price:,} руб\n\n"
+            f"📸 Загрузите любую свою фотографию — мы напечатаем холст именно с ней!\n\n"
+            f"Галерейная натяжка на подрамник из крепких пород дерева.\n"
+            f"Срок изготовления: до 3 дней.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("💬 Заказать этот размер", url="https://t.me/redstamp55")],
+                [InlineKeyboardButton("← Назад", callback_data="canvases")],
+            ])
+        )
+
+    elif data.startswith("starmap_"):
+        sizes = {
+            "starmap_20x30": ("20×30 см", 1652),
+            "starmap_30x30": ("30×30 см", 1596),
+            "starmap_30x40": ("30×40 см", 2282),
+            "starmap_40x40": ("40×40 см", 2380),
+            "starmap_40x50": ("40×50 см", 2520),
+            "starmap_50x50": ("50×50 см", 2842),
+            "starmap_40x60": ("40×60 см", 3010),
+            "starmap_50x60": ("50×60 см", 3360),
+            "starmap_60x80": ("60×80 см", 3563),
+            "starmap_80x110": ("80×110 см", 6020),
+        }
+        size_name, price = sizes.get(data, ("?", 0))
+        await query.edit_message_text(
+            f"🌟 Звёздная карта {size_name}\n\n"
+            f"💰 Цена: {price:,} руб\n\n"
+            f"Укажите дату, время и город — и мы создадим карту звёздного неба именно для вашего момента ✨\n\n"
+            f"Срок изготовления: до 3 дней.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("💬 Заказать", url="https://t.me/redstamp55")],
+                [InlineKeyboardButton("← Назад", callback_data="starmap")],
+            ])
         )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
