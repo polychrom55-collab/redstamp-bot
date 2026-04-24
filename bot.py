@@ -362,26 +362,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [InlineKeyboardButton("← Назад", callback_data="canvases")],
             ])
         )
-        await query.edit_message_text(
-            "🌟 Звёздная карта\n\n"
-            "Карта звёздного неба над вами в момент предложения руки и сердца, "
-            "первого поцелуя, рождения ребёнка или любой важной даты.\n\n"
-            "Вы указываете дату, время и город — мы создаём персональную карту с вашей подписью.\n\n"
-            "Выберите размер:",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("20×30 см", callback_data="starmap_20x30"),
-                 InlineKeyboardButton("30×30 см", callback_data="starmap_30x30")],
-                [InlineKeyboardButton("30×40 см", callback_data="starmap_30x40"),
-                 InlineKeyboardButton("40×40 см", callback_data="starmap_40x40")],
-                [InlineKeyboardButton("40×50 см", callback_data="starmap_40x50"),
-                 InlineKeyboardButton("50×50 см", callback_data="starmap_50x50")],
-                [InlineKeyboardButton("40×60 см", callback_data="starmap_40x60"),
-                 InlineKeyboardButton("50×60 см", callback_data="starmap_50x60")],
-                [InlineKeyboardButton("60×80 см", callback_data="starmap_60x80"),
-                 InlineKeyboardButton("80×110 см", callback_data="starmap_80x110")],
-                [InlineKeyboardButton("← Назад", callback_data="canvases")],
-            ])
-        )
 
     elif data.startswith("starmap_"):
         sizes = {
@@ -686,32 +666,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             currency="RUB",
             prices=[LabeledPrice("Курс «Полиграфия на дому»", 990000)],
             need_name=True, need_phone_number=True,
-        )
-
-    elif data.startswith("canvas_"):
-        sizes = {
-            "canvas_20x30": ("20×30 см", 1652),
-            "canvas_30x30": ("30×30 см", 1596),
-            "canvas_30x40": ("30×40 см", 2282),
-            "canvas_40x40": ("40×40 см", 2380),
-            "canvas_40x50": ("40×50 см", 2520),
-            "canvas_50x50": ("50×50 см", 2842),
-            "canvas_40x60": ("40×60 см", 3010),
-            "canvas_50x60": ("50×60 см", 3360),
-            "canvas_60x80": ("60×80 см", 3563),
-            "canvas_80x110": ("80×110 см", 6020),
-        }
-        size_name, price = sizes.get(data, ("?", 0))
-        await query.edit_message_text(
-            f"🖼 Холст {size_name}\n\n"
-            f"💰 Цена: {price:,} руб\n\n"
-            f"📸 Загрузите любую свою фотографию — мы напечатаем холст именно с ней!\n\n"
-            f"Галерейная натяжка на подрамник из крепких пород дерева.\n"
-            f"Срок изготовления: до 3 дней.",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("💬 Заказать этот размер", url="https://t.me/redstamp55")],
-                [InlineKeyboardButton("← Назад", callback_data="canvases")],
-            ])
         )
 
     elif data.startswith("starmap_"):
