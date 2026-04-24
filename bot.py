@@ -149,6 +149,55 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chat_id=OWNER_CHAT_ID,
         text=f"👤 Новый клиент!\n\nИмя: {name}\nUsername: @{username}\nID: {user_id}"
     )
+
+    # Если человек пришёл с сайта после оплаты курса
+    if context.args and context.args[0] == "course":
+        await update.message.reply_text(
+            "🎉 Добро пожаловать на курс «Заработок на свадебной полиграфии из дома»!\n\n"
+            "Сейчас отправлю все материалы 👇"
+        )
+        await context.bot.send_message(chat_id=update.message.chat_id, text="🎬 Видеоуроки курса:")
+        await context.bot.send_message(
+            chat_id=update.message.chat_id,
+            text="📹 Урок 1 — Оборудование\nhttps://rutube.ru/video/private/9c44ca5e8c629a394f2460854422c1ed/?p=NEmztr1FjO3kbkyZVSvtzA"
+        )
+        await context.bot.send_message(
+            chat_id=update.message.chat_id,
+            text="📹 Урок 2 — Работа в CorelDRAW\nhttps://rutube.ru/video/private/df9bd92e8fef893248c1d8298890036c/?p=fxnZlm54n4r5GwHQNEtSOQ"
+        )
+        await context.bot.send_message(
+            chat_id=update.message.chat_id,
+            text="📹 Урок 3 — Сборка пригласительных\n⏳ Скоро будет доступен — мы уведомим вас!"
+        )
+        await context.bot.send_message(
+            chat_id=update.message.chat_id,
+            text="📹 Урок 4 — Продажи, ценообразование и клиенты\nhttps://rutube.ru/video/private/c36bc94666f63f81aa430a2c3216b913/?p=_lRAuKTVqy6DH7mR_EA0-A"
+        )
+        await context.bot.send_message(chat_id=update.message.chat_id, text="📦 Программы и файлы для работы:")
+        await context.bot.send_document(
+            chat_id=update.message.chat_id,
+            document="BQACAgIAAxkBAAIB4WnrcpCAcdTtefh18t4_NigmVB17AAJepAAChzhZS8Sj8espfeqUOwQ",
+            caption="💿 CorelDRAW — установочный файл"
+        )
+        await context.bot.send_document(
+            chat_id=update.message.chat_id,
+            document="BQACAgIAAxkBAAIB42nrcrfR97ZBBQIyrnEenozHbOCtAAJfpAAChzhZS-VASCfhWvNjOwQ",
+            caption="🖨 Драйвер для принтера Epson L805"
+        )
+        await context.bot.send_document(
+            chat_id=update.message.chat_id,
+            document="BQACAgIAAxkBAAIB5Gnrcrfhti7FjtONCkUUkdLTPAoZAAJgpAAChzhZSx32_Rmy_4GcOwQ",
+            caption="🔌 Соединитель для принтера и компьютера"
+        )
+        await context.bot.send_message(
+            chat_id=update.message.chat_id,
+            text="🏘 Вступайте в наше сообщество — там общаемся, делимся опытом и помогаем друг другу!\nhttps://t.me/dizipoly/1\n\nЕсли появятся вопросы — пишите, всегда поможем! 😊",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("📞 Написать менеджеру", url="https://t.me/redstamp55")]
+            ])
+        )
+        return
+
     await update.message.reply_text(
         "Привет! Меня зовут Дима — я ИИ-помощник компании «Красная Печать» 🤖\n\n"
         "Помогу подобрать свадебную полиграфию и рассчитаю стоимость. "
@@ -611,7 +660,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "pdf_mistakes":
         await context.bot.send_document(
             chat_id=query.message.chat_id,
-            document="BQACAgIAAxkBAAIBwGnqD5xB16tOA3jkB0Wb_bniA3YyAAKTmgACDg1QS4C1-YOptWH1OwQ",
+            document="BQACAgIAAxkBAAIB32nrbiLOxuXiuvUhCpYY1I3Y1aklAAI4lwACDg1gS0mjuEBbJeUNOwQ",
             caption="📄 ТОП ошибок новичков в свадебной полиграфии\n\nИзучи перед стартом — сэкономит время и деньги!"
         )
         await query.answer()
@@ -951,30 +1000,92 @@ async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE)
     username = update.effective_user.username or ""
     amount = payment.total_amount // 100
     charge_id = payment.provider_payment_charge_id
+    payload = payment.invoice_payload
 
     reminders.pop(user_id, None)
     reminders[user_id] = {"send_at": datetime.now() + timedelta(hours=336), "type": "review"}
 
-    await update.message.reply_text(
-        f"✅ Оплата {amount} руб получена!\n\n"
-        f"Спасибо! Вот что будет дальше:\n\n"
-        f"📋 Пришлите нам:\n"
-        f"• Имена молодожёнов\n"
-        f"• Дату и время свадьбы\n"
-        f"• Место проведения\n"
-        f"• Дресс-код (если есть)\n"
-        f"• Любые пожелания по тексту\n\n"
-        f"🎨 Мы подготовим макет и отправим вам на согласование перед печатью.\n\n"
-        f"⏱ Срок изготовления — 5-10 рабочих дней после утверждения макета.\n\n"
-        f"Напишите менеджеру — он примет все детали и ответит на вопросы!",
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("📞 Написать менеджеру", url="https://t.me/redstamp55")]
-        ])
-    )
+    # Уведомление владельца
     await context.bot.send_message(
         chat_id=OWNER_CHAT_ID,
-        text=f"💰 Новая оплата!\n\nКлиент: {name} (@{username}, id: {user_id})\nСумма: {amount} руб\nID транзакции: {charge_id}"
+        text=f"💰 Новая оплата!\n\nКлиент: {name} (@{username}, id: {user_id})\nСумма: {amount} руб\nID транзакции: {charge_id}\nПолезная нагрузка: {payload}"
     )
+
+    # Если оплата за курс
+    if payload == "course_payment":
+        await update.message.reply_text(
+            f"✅ Оплата {amount} руб получена!\n\n"
+            f"Добро пожаловать на курс «Заработок на свадебной полиграфии из дома»! 🎉\n\n"
+            f"Сейчас отправлю все материалы курса 👇"
+        )
+
+        # Уроки
+        await context.bot.send_message(
+            chat_id=update.message.chat_id,
+            text="🎬 Видеоуроки курса:"
+        )
+        await context.bot.send_message(
+            chat_id=update.message.chat_id,
+            text="📹 Урок 1 — Оборудование\nhttps://rutube.ru/video/private/9c44ca5e8c629a394f2460854422c1ed/?p=NEmztr1FjO3kbkyZVSvtzA"
+        )
+        await context.bot.send_message(
+            chat_id=update.message.chat_id,
+            text="📹 Урок 2 — Работа в CorelDRAW\nhttps://rutube.ru/video/private/df9bd92e8fef893248c1d8298890036c/?p=fxnZlm54n4r5GwHQNEtSOQ"
+        )
+        await context.bot.send_message(
+            chat_id=update.message.chat_id,
+            text="📹 Урок 3 — Сборка пригласительных\n⏳ Скоро будет доступен — мы уведомим вас!"
+        )
+        await context.bot.send_message(
+            chat_id=update.message.chat_id,
+            text="📹 Урок 4 — Продажи, ценообразование и клиенты\nhttps://rutube.ru/video/private/c36bc94666f63f81aa430a2c3216b913/?p=_lRAuKTVqy6DH7mR_EA0-A"
+        )
+
+        # Файлы
+        await context.bot.send_message(
+            chat_id=update.message.chat_id,
+            text="📦 Программы и файлы для работы:"
+        )
+        await context.bot.send_document(
+            chat_id=update.message.chat_id,
+            document="BQACAgIAAxkBAAIB4WnrcpCAcdTtefh18t4_NigmVB17AAJepAAChzhZS8Sj8espfeqUOwQ",
+            caption="💿 CorelDRAW — установочный файл"
+        )
+        await context.bot.send_document(
+            chat_id=update.message.chat_id,
+            document="BQACAgIAAxkBAAIB42nrcrfR97ZBBQIyrnEenozHbOCtAAJfpAAChzhZS-VASCfhWvNjOwQ",
+            caption="🖨 Драйвер для принтера Epson L805"
+        )
+        await context.bot.send_document(
+            chat_id=update.message.chat_id,
+            document="BQACAgIAAxkBAAIB5Gnrcrfhti7FjtONCkUUkdLTPAoZAAJgpAAChzhZSx32_Rmy_4GcOwQ",
+            caption="🔌 Соединитель для принтера и компьютера"
+        )
+
+        await context.bot.send_message(
+            chat_id=update.message.chat_id,
+            text="🏘 Вступайте в наше сообщество — там общаемся, делимся опытом и помогаем друг другу!\nhttps://t.me/dizipoly/1\n\nЕсли появятся вопросы — пишите, всегда поможем! 😊",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("📞 Написать менеджеру", url="https://t.me/redstamp55")]
+            ])
+        )
+        # Обычный заказ полиграфии
+        await update.message.reply_text(
+            f"✅ Оплата {amount} руб получена!\n\n"
+            f"Спасибо! Вот что будет дальше:\n\n"
+            f"📋 Пришлите нам:\n"
+            f"• Имена молодожёнов\n"
+            f"• Дату и время свадьбы\n"
+            f"• Место проведения\n"
+            f"• Дресс-код (если есть)\n"
+            f"• Любые пожелания по тексту\n\n"
+            f"🎨 Мы подготовим макет и отправим вам на согласование перед печатью.\n\n"
+            f"⏱ Срок изготовления — 5-10 рабочих дней после утверждения макета.\n\n"
+            f"Напишите менеджеру — он примет все детали и ответит на вопросы!",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("📞 Написать менеджеру", url="https://t.me/redstamp55")]
+            ])
+        )
 
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if str(update.effective_chat.id) != OWNER_CHAT_ID:
