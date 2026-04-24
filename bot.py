@@ -351,6 +351,8 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "canvas_80x110": ("80×110 см", 6020),
         }
         size_name, price = sizes.get(data, ("?", 0))
+        # Получаем аналогичный размер для звёздной карты
+        starmap_key = data.replace("canvas_", "starmap_")
         await query.edit_message_text(
             f"🖼 Холст {size_name}\n\n"
             f"💰 Цена: {price:,} руб\n\n"
@@ -359,6 +361,29 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Срок изготовления: до 3 дней.",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("💬 Заказать этот размер", url="https://t.me/redstamp55")],
+                [InlineKeyboardButton("🌟 Сделать звёздной картой", callback_data=starmap_key)],
+                [InlineKeyboardButton("← Назад к размерам", callback_data="canvases")],
+            ])
+        )
+
+    elif data == "starmap":
+        await query.edit_message_text(
+            "🌟 Звёздная карта\n\n"
+            "Карта звёздного неба над вами в момент предложения руки и сердца, "
+            "первого поцелуя, рождения ребёнка или любой важной даты.\n\n"
+            "Вы указываете дату, время и город — мы создаём персональную карту с вашей подписью.\n\n"
+            "Выберите размер:",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("20×30 см", callback_data="starmap_20x30"),
+                 InlineKeyboardButton("30×30 см", callback_data="starmap_30x30")],
+                [InlineKeyboardButton("30×40 см", callback_data="starmap_30x40"),
+                 InlineKeyboardButton("40×40 см", callback_data="starmap_40x40")],
+                [InlineKeyboardButton("40×50 см", callback_data="starmap_40x50"),
+                 InlineKeyboardButton("50×50 см", callback_data="starmap_50x50")],
+                [InlineKeyboardButton("40×60 см", callback_data="starmap_40x60"),
+                 InlineKeyboardButton("50×60 см", callback_data="starmap_50x60")],
+                [InlineKeyboardButton("60×80 см", callback_data="starmap_60x80"),
+                 InlineKeyboardButton("80×110 см", callback_data="starmap_80x110")],
                 [InlineKeyboardButton("← Назад", callback_data="canvases")],
             ])
         )
@@ -377,6 +402,8 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "starmap_80x110": ("80×110 см", 6020),
         }
         size_name, price = sizes[data]
+        # Получаем аналогичный размер для холста
+        canvas_key = data.replace("starmap_", "canvas_")
         await query.edit_message_text(
             f"🌟 Звёздная карта {size_name}\n\n"
             f"💰 Цена: {price:,} руб\n\n"
@@ -384,7 +411,8 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Срок изготовления: до 3 дней.",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("💬 Заказать", url="https://t.me/redstamp55")],
-                [InlineKeyboardButton("← Назад", callback_data="starmap")],
+                [InlineKeyboardButton("🖼 Сделать обычным холстом", callback_data=canvas_key)],
+                [InlineKeyboardButton("← Назад к размерам", callback_data="starmap")],
             ])
         )
 
