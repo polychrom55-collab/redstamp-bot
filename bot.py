@@ -780,6 +780,7 @@ def get_smart_buttons(reply: str, history: list) -> InlineKeyboardMarkup:
     ])
 
 
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     name = update.effective_user.full_name
     username = update.effective_user.username or ""
