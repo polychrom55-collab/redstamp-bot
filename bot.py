@@ -350,7 +350,18 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "canvas_60x80": ("60×80 см", 3563),
             "canvas_80x110": ("80×110 см", 6020),
         }
-    elif data == "starmap":
+        size_name, price = sizes.get(data, ("?", 0))
+        await query.edit_message_text(
+            f"🖼 Холст {size_name}\n\n"
+            f"💰 Цена: {price:,} руб\n\n"
+            f"📸 Загрузите любую свою фотографию — мы напечатаем холст именно с ней!\n\n"
+            f"Галерейная натяжка на подрамник из крепких пород дерева.\n"
+            f"Срок изготовления: до 3 дней.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("💬 Заказать этот размер", url="https://t.me/redstamp55")],
+                [InlineKeyboardButton("← Назад", callback_data="canvases")],
+            ])
+        )
         await query.edit_message_text(
             "🌟 Звёздная карта\n\n"
             "Карта звёздного неба над вами в момент предложения руки и сердца, "
