@@ -431,10 +431,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         photo_id = CANVAS_PHOTOS.get(data)
         if photo_id:
-            try:
-                await query.message.delete()
-            except:
-                pass
+            await query.answer()
             await context.bot.send_photo(
                 chat_id=query.message.chat_id,
                 photo=photo_id,
