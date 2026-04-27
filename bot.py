@@ -403,6 +403,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     elif data.startswith("canvas_") and not data == "canvases":
+        await query.answer()
         sizes = {
             "canvas_20x30": ("20×30 см", 1652),
             "canvas_30x30": ("30×30 см", 1596),
@@ -431,7 +432,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         photo_id = CANVAS_PHOTOS.get(data)
         if photo_id:
-            await query.answer()
             await context.bot.send_photo(
                 chat_id=query.message.chat_id,
                 photo=photo_id,
