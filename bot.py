@@ -49,16 +49,16 @@ PRICE_NAMES = [
 
 # Фото холстов по размерам (file_id из Telegram)
 CANVAS_PHOTOS = {
-    "canvas_20x30": None,   # пока нет — добавь file_id
-    "canvas_30x30": None,
-    "canvas_30x40": None,
-    "canvas_40x40": None,
-    "canvas_40x50": None,
-    "canvas_50x50": None,
-    "canvas_40x60": None,
-    "canvas_50x60": None,
-    "canvas_60x80": None,
-    "canvas_80x110": None,
+    "canvas_20x30": "BQACAgIAAxkBAAICS2nvJIzi7iN84r06Bzc0KdE01_MJAAKQigACbYB5SxHCZYOlN8UlOwQ",
+    "canvas_30x30": "BQACAgIAAxkBAAICT2nvJPrf_ewesG5UL8YL2vr70UnZAAKVigACbYB5S5QXdb3HBYwAATsE",
+    "canvas_30x40": "BQACAgIAAxkBAAICUWnvJQ4n2zI81Jiq5NfAuLJMUL_7AAKXigACbYB5SyKDEAw0Nu_YOwQ",
+    "canvas_40x40": "BQACAgIAAxkBAAICU2nvJR5SU301iIeULRt7d5cn7uUdAAKYigACbYB5S0rU5ZF7KDKQOwQ",
+    "canvas_40x50": "BQACAgIAAxkBAAICVWnvJTP-VDulcxAiJY_RbJJFQp2lAAKZigACbYB5S92dOQy3wZ4fOwQ",
+    "canvas_40x60": "BQACAgIAAxkBAAICV2nvJjk95uXk45mb9NDZe2n7RYisAAKjigACbYB5S8do3W_T6liROwQ",
+    "canvas_50x50": "BQACAgIAAxkBAAICWWnvJlHz4Xy3i_RtZM2wqR9gYT85AAKmigACbYB5S0whjLWXdjHMOwQ",
+    "canvas_50x60": "BQACAgIAAxkBAAICW2nvJl8x8FSsOKDUUMRna9T7CkH3AAKoigACbYB5S4t598aryohXOwQ",
+    "canvas_60x80": "BQACAgIAAxkBAAICXWnvJpLsocsM3L-CcvRBoFQcYaS6AAKrigACbYB5S0qdiSHwn0d7OwQ",
+    "canvas_80x110": "BQACAgIAAxkBAAICX2nvJra0SGJAf8cmfkABtNUl0B_JAAKsigACbYB5S94RMb8qWVROOwQ",
 }
 carousel_page = {}
 # Выбранный набор: user_id -> номер страницы
