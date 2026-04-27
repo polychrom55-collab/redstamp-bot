@@ -47,7 +47,19 @@ PRICE_NAMES = [
     "Набор 12 «Ничего лишнего» — 280 руб/шт",
 ]
 
-# Состояние карусели: user_id -> текущая страница
+# Фото холстов по размерам (file_id из Telegram)
+CANVAS_PHOTOS = {
+    "canvas_20x30": None,   # пока нет — добавь file_id
+    "canvas_30x30": None,
+    "canvas_30x40": None,
+    "canvas_40x40": None,
+    "canvas_40x50": None,
+    "canvas_50x50": None,
+    "canvas_40x60": None,
+    "canvas_50x60": None,
+    "canvas_60x80": None,
+    "canvas_80x110": None,
+}
 carousel_page = {}
 # Выбранный набор: user_id -> номер страницы
 selected_set = {}
@@ -119,7 +131,6 @@ reminders = {}
 
 MAIN_MENU = InlineKeyboardMarkup([
     [InlineKeyboardButton("📖 Наш каталог", callback_data="catalog")],
-    [InlineKeyboardButton("❤️ Мне понравилось", callback_data="liked")],
     [InlineKeyboardButton("🧮 Калькулятор", callback_data="calc")],
     [InlineKeyboardButton("❓ Частые вопросы", callback_data="faq")],
     [InlineKeyboardButton("📍 О нас", callback_data="about")],
@@ -254,90 +265,144 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = query.from_user.id
         await query.answer()
 
-        quick_map = {
-            "quick_20": "20 штук",
-            "quick_30": "30 штук",
-            "quick_50": "50 штук",
-            "quick_70": "70 штук",
-            "quick_100": "100 штук",
-            "quick_seating": "Да, добавьте карточки рассадки в том же стиле",
-            "quick_gifts": "Да, интересуют подарки гостям",
-            "quick_only_invites": "Нет, только пригласительные",
-            "quick_spring": "Весна 2025",
-            "quick_summer": "Лето 2025",
-            "quick_autumn": "Осень 2025",
-            "quick_winter": "Зима 2025",
-            "quick_2026": "2026 год",
-            "quick_style_soft": "Нежный пастельный стиль",
-            "quick_style_classic": "Классический строгий стиль",
-            "quick_style_bright": "Яркий насыщенный стиль",
-            "quick_style_nature": "Природный стиль, ботаника",
-        }
+        if data == "quick_only_invites":
+            history = user_histories.get(user_id, [])
+            amount, description = None, "Заказ свадебной полиграфии"
+            for msg in history:
+                if msg.get("role") == "assistant" and msg.get("content", "").startswith("PENDING_ORDER:"):
+                    parts = msg["content"].split(":", 2)
+                    if len(parts) == 3:
+                        amount = int(parts[1])
+                        description = parts[2]
+                    break
+            if amount:
+                uname = query.from_user.full_name
+                uusername = query.from_user.username or ""
+                await context.bot.send_message(
+                    chat_id=OWNER_CHAT_ID,
+                    text=f"📋 Новый заказ!\n\nКлиент: {uname} (@{uusername}, id: {user_id})\nСостав: {description}\nСумма: {amount} руб"
+                )
+                await context.bot.send_invoice(
+                    chat_id=query.message.chat_id,
+                    title="Заказ — Красная Печать",
+                    description=description,
+                    payload=f"order_{user_id}",
+                    provider_token=PAYMENT_TOKEN,
+                    currency="RUB",
+                    prices=[LabeledPrice("Оплата заказа 100%", amount * 100)],
+                    need_name=True, need_phone_number=True,
+                )
+                await context.bot.send_message(
+                    chat_id=query.message.chat_id,
+                    text="После оплаты напишите все детали менеджеру @redstamp55 — имена, дату, место и пожелания 🎨\n\n"
+                         "Кстати, хотите карточки рассадки или подарки гостям в том же стиле? 😊",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("✅ Да, карточки рассадки", callback_data="quick_seating")],
+                        [InlineKeyboardButton("🎁 Подарки гостям", callback_data="quick_gifts")],
+                        [InlineKeyboardButton("📞 Написать менеджеру", url="https://t.me/redstamp55")],
+                    ])
+                )
+            else:
+                await context.bot.send_message(
+                    chat_id=query.message.chat_id,
+                    text="Напишите менеджеру — он рассчитает стоимость и выставит счёт!",
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📞 @redstamp55", url="https://t.me/redstamp55")]])
+                )
+            return
 
-        text = quick_map.get(data, data)
-        await context.bot.send_message(chat_id=query.message.chat_id, text=f"✅ {text}")
-
-        if user_id not in user_histories:
-            user_histories[user_id] = []
-        user_histories[user_id].append({"role": "user", "content": text})
-        await context.bot.send_chat_action(chat_id=query.message.chat_id, action="typing")
-
-        try:
-            response = await ai_client.chat.completions.create(
-                model="deepseek-chat",
-                max_tokens=1000,
-                messages=[{"role": "system", "content": SYSTEM_PROMPT}] + user_histories[user_id]
+        # Карточки рассадки — спрашиваем количество
+        if data == "quick_seating":
+            history = user_histories.get(user_id, [])
+            for msg in history:
+                if msg.get("role") == "assistant" and msg.get("content", "").startswith("PENDING_ORDER:"):
+                    parts = msg["content"].split(":", 2)
+                    if len(parts) == 3:
+                        base_amount = int(parts[1])
+                        base_desc = parts[2]
+                        await context.bot.send_message(
+                            chat_id=query.message.chat_id,
+                            text=f"Отлично! Карточки рассадки от 40 руб/шт.\n\nСколько карточек нужно?",
+                            reply_markup=InlineKeyboardMarkup([
+                                [InlineKeyboardButton("10 шт (+400₽)", callback_data="seating_10"),
+                                 InlineKeyboardButton("20 шт (+800₽)", callback_data="seating_20")],
+                                [InlineKeyboardButton("30 шт (+1200₽)", callback_data="seating_30"),
+                                 InlineKeyboardButton("50 шт (+2000₽)", callback_data="seating_50")],
+                                [InlineKeyboardButton("❌ Не нужны", callback_data="quick_only_invites")],
+                            ])
+                        )
+                        return
+            await context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text="Карточки рассадки от 40 руб/шт. Напишите менеджеру для расчёта!",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📞 @redstamp55", url="https://t.me/redstamp55")]])
             )
-            reply = response.choices[0].message.content
-            user_histories[user_id].append({"role": "assistant", "content": reply})
+            return
 
-            if "ИТОГ:" in reply and "СОСТАВ:" in reply:
-                lines = reply.split("\n")
-                amount, description, clean_reply = None, "Заказ свадебной полиграфии", ""
-                for line in lines:
-                    if line.startswith("ИТОГ:"):
-                        try:
-                            amount = int("".join(filter(str.isdigit, line)))
-                        except:
-                            pass
-                    elif line.startswith("СОСТАВ:"):
-                        description = line.replace("СОСТАВ:", "").strip()
-                    else:
-                        clean_reply += line + "\n"
-                if clean_reply.strip():
-                    await context.bot.send_message(chat_id=query.message.chat_id, text=clean_reply.strip())
-                if amount and amount >= 100:
-                    uname = query.from_user.full_name
-                    uusername = query.from_user.username or ""
-                    await context.bot.send_message(
-                        chat_id=OWNER_CHAT_ID,
-                        text=f"📋 Новый заказ!\n\nКлиент: {uname} (@{uusername}, id: {user_id})\nСостав: {description}\nСумма: {amount} руб"
-                    )
+        # Подарки гостям
+        if data == "quick_gifts":
+            await context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text="🎁 Подарки гостям рассчитываются индивидуально.\nНапишите менеджеру — подберём лучший вариант!",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📞 @redstamp55", url="https://t.me/redstamp55")]])
+            )
+            return
+
+        # Количество из быстрых кнопок (20/30/50/70/100 шт)
+        qty_map = {"quick_20": 20, "quick_30": 30, "quick_50": 50, "quick_70": 70, "quick_100": 100}
+        if data in qty_map and user_id in selected_set:
+            qty = qty_map[data]
+            page = selected_set[user_id]
+            set_name = PRICE_NAMES[page]
+            set_price = int(set_name.split("—")[1].replace("руб/шт", "").strip())
+            total = set_price * qty
+            user_histories[user_id] = [{"role": "assistant", "content": f"PENDING_ORDER:{total}:{set_name.split('—')[0].strip()}, {qty} шт"}]
+            await context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text=f"{set_name.split('—')[0].strip()}\n{qty} шт × {set_price} руб = {total:,} руб\n\nНужны карточки рассадки?",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("✅ Да, карточки рассадки", callback_data="quick_seating")],
+                    [InlineKeyboardButton("❌ Нет, выставляйте счёт", callback_data="quick_only_invites")],
+                ])
+            )
+            return
+
+    elif data.startswith("seating_"):
+        qty_map = {"seating_10": (10, 400), "seating_20": (20, 800), "seating_30": (30, 1200), "seating_50": (50, 2000)}
+        qty, add_price = qty_map.get(data, (10, 400))
+        history = user_histories.get(user_id, [])
+        for msg in history:
+            if msg.get("role") == "assistant" and msg.get("content", "").startswith("PENDING_ORDER:"):
+                parts = msg["content"].split(":", 2)
+                if len(parts) == 3:
+                    base_amount = int(parts[1])
+                    base_desc = parts[2]
+                    new_total = base_amount + add_price
+                    new_desc = f"{base_desc} + карточки рассадки {qty} шт"
+                    msg["content"] = f"PENDING_ORDER:{new_total}:{new_desc}"
+                    await query.answer()
                     await context.bot.send_message(
                         chat_id=query.message.chat_id,
-                        text="Отлично! Перед оплатой подготовьте данные для макета:\n\n"
-                             "• Имена молодожёнов\n• Дату и время свадьбы\n• Место проведения\n"
-                             "• Дресс-код (если есть)\n• Пожелания по тексту\n\n"
-                             "После оплаты пришлите всё менеджеру @redstamp55 🎨\n\nВыставляю счёт 👇",
-                        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📞 @redstamp55", url="https://t.me/redstamp55")]])
+                        text=f"✅ Добавлено!\n\n{base_desc}\nКарточки рассадки {qty} шт — {add_price} руб\n\nИтого: {new_total:,} руб\n\nВыставляю счёт 👇",
                     )
                     await context.bot.send_invoice(
                         chat_id=query.message.chat_id,
                         title="Заказ — Красная Печать",
-                        description=description,
+                        description=new_desc,
                         payload=f"order_{user_id}",
                         provider_token=PAYMENT_TOKEN,
                         currency="RUB",
-                        prices=[LabeledPrice("Оплата заказа 100%", amount * 100)],
+                        prices=[LabeledPrice("Оплата заказа 100%", new_total * 100)],
                         need_name=True, need_phone_number=True,
                     )
-            else:
-                keyboard = get_smart_buttons(reply, user_histories[user_id])
-                await context.bot.send_message(chat_id=query.message.chat_id, text=reply, reply_markup=keyboard)
-        except Exception as e:
-            logging.error(f"Quick reply error: {e}")
+                    return
+        await query.answer()
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text="Напишите менеджеру для расчёта!",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📞 @redstamp55", url="https://t.me/redstamp55")]])
+        )
 
-    elif data.startswith("canvas_"):
+    elif data.startswith("canvas_") and not data == "canvases":
         sizes = {
             "canvas_20x30": ("20×30 см", 1652),
             "canvas_30x30": ("30×30 см", 1596),
@@ -351,20 +416,33 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "canvas_80x110": ("80×110 см", 6020),
         }
         size_name, price = sizes.get(data, ("?", 0))
-        # Получаем аналогичный размер для звёздной карты
         starmap_key = data.replace("canvas_", "starmap_")
-        await query.edit_message_text(
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("💬 Заказать этот размер", url="https://t.me/redstamp55")],
+            [InlineKeyboardButton("🌟 Сделать звёздной картой", callback_data=starmap_key)],
+            [InlineKeyboardButton("← Назад к размерам", callback_data="canvases")],
+        ])
+        caption = (
             f"🖼 Холст {size_name}\n\n"
             f"💰 Цена: {price:,} руб\n\n"
             f"📸 Загрузите любую свою фотографию — мы напечатаем холст именно с ней!\n\n"
             f"Галерейная натяжка на подрамник из крепких пород дерева.\n"
-            f"Срок изготовления: до 3 дней.",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("💬 Заказать этот размер", url="https://t.me/redstamp55")],
-                [InlineKeyboardButton("🌟 Сделать звёздной картой", callback_data=starmap_key)],
-                [InlineKeyboardButton("← Назад к размерам", callback_data="canvases")],
-            ])
+            f"Срок изготовления: до 3 дней."
         )
+        photo_id = CANVAS_PHOTOS.get(data)
+        if photo_id:
+            try:
+                await query.message.delete()
+            except:
+                pass
+            await context.bot.send_photo(
+                chat_id=query.message.chat_id,
+                photo=photo_id,
+                caption=caption,
+                reply_markup=keyboard
+            )
+        else:
+            await query.edit_message_text(caption, reply_markup=keyboard)
 
     elif data == "starmap":
         await query.edit_message_text(
@@ -870,84 +948,42 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id not in user_histories:
         user_histories[user_id] = []
 
-    user_histories[user_id].append({"role": "user", "content": text})
-    await update.message.chat.send_action("typing")
+    # Если выбран набор — обрабатываем количество
+    if user_id in selected_set:
+        digits = "".join(filter(str.isdigit, text))
+        if digits:
+            qty = int(digits)
+            if qty < 4:
+                await update.message.reply_text(
+                    "Минимальный заказ — от 4 штук. Введите количество от 4 👇",
+                    reply_markup=BACK
+                )
+                return
+            page = selected_set[user_id]
+            set_name = PRICE_NAMES[page]
+            set_price = int(set_name.split("—")[1].replace("руб/шт", "").strip())
+            total = set_price * qty
+            description = f"{set_name.split('—')[0].strip()}, {qty} шт"
+            user_histories[user_id] = [{"role": "assistant", "content": f"PENDING_ORDER:{total}:{description}"}]
 
-    try:
-        response = await ai_client.chat.completions.create(
-            model="deepseek-chat",
-            max_tokens=1000,
-            messages=[{"role": "system", "content": SYSTEM_PROMPT}] + user_histories[user_id]
-        )
-        reply = response.choices[0].message.content
-        user_histories[user_id].append({"role": "assistant", "content": reply})
-
-        if "СПРОСИ_ХОЗЯИНА:" in reply:
-            lines = reply.split("\n")
-            clean_reply, question = "", ""
-            for line in lines:
-                if line.startswith("СПРОСИ_ХОЗЯИНА:"):
-                    question = line.replace("СПРОСИ_ХОЗЯИНА:", "").strip()
-                else:
-                    clean_reply += line + "\n"
-            await update.message.reply_text(clean_reply.strip())
-            await context.bot.send_message(
-                chat_id=OWNER_CHAT_ID,
-                text=f"Запрос цены!\n\nКлиент: {name} (@{username}, id: {user_id})\n\n{question}\n\nОтветь:\nЦЕНА: 5000 клиент: {user_id}"
+            await update.message.reply_text(
+                f"💍 {set_name.split('—')[0].strip()}\n"
+                f"{qty} шт × {set_price} руб = *{total:,} руб*\n\n"
+                f"Для того чтобы указать имена, дату, место и дополнительную информацию — напишите менеджеру @redstamp55 после оплаты.\n\n"
+                f"Если всё подходит — выставляю счёт! 👇",
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("✅ Да, выставляйте счёт!", callback_data="quick_only_invites")],
+                    [InlineKeyboardButton("← В меню", callback_data="main")],
+                ])
             )
+            return
 
-        elif "ИТОГ:" in reply and "СОСТАВ:" in reply:
-            lines = reply.split("\n")
-            amount, description, clean_reply = None, "Заказ свадебной полиграфии", ""
-            for line in lines:
-                if line.startswith("ИТОГ:"):
-                    try:
-                        amount = int("".join(filter(str.isdigit, line)))
-                    except:
-                        pass
-                elif line.startswith("СОСТАВ:"):
-                    description = line.replace("СОСТАВ:", "").strip()
-                else:
-                    clean_reply += line + "\n"
-            if clean_reply.strip():
-                await update.message.reply_text(clean_reply.strip())
-            if amount and amount >= 100:
-                reminders.pop(user_id, None)
-                await context.bot.send_message(
-                    chat_id=OWNER_CHAT_ID,
-                    text=f"📋 Новый заказ!\n\nКлиент: {name} (@{username}, id: {user_id})\nСостав: {description}\nСумма: {amount} руб\n\nОтправляю счёт клиенту..."
-                )
-                await context.bot.send_message(
-                    chat_id=update.message.chat_id,
-                    text=f"Отлично! Перед оплатой подготовьте данные для макета:\n\n"
-                         f"• Имена молодожёнов\n"
-                         f"• Дату и время свадьбы\n"
-                         f"• Место проведения\n"
-                         f"• Дресс-код (если есть)\n"
-                         f"• Любые пожелания по тексту\n\n"
-                         f"После оплаты пришлите всё это напрямую нашему менеджеру @redstamp55 — он подготовит макет на согласование перед печатью 🎨\n\n"
-                         f"Выставляю счёт 👇",
-                    reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("📞 @redstamp55", url="https://t.me/redstamp55")]
-                    ])
-                )
-                await context.bot.send_invoice(
-                    chat_id=update.message.chat_id,
-                    title="Заказ — Красная Печать",
-                    description=description,
-                    payload=f"order_{user_id}",
-                    provider_token=PAYMENT_TOKEN,
-                    currency="RUB",
-                    prices=[LabeledPrice("Оплата заказа 100%", amount * 100)],
-                    need_name=True, need_phone_number=True,
-                )
-        else:
-            keyboard = get_smart_buttons(reply, user_histories[user_id])
-            await update.message.reply_text(reply, reply_markup=keyboard)
-
-    except Exception as e:
-        logging.error(f"API error: {e}")
-        await update.message.reply_text("Что-то пошло не так. Попробуйте ещё раз.", reply_markup=BACK)
+    # Если человек просто написал текст — показываем меню
+    await update.message.reply_text(
+        "Выберите что вас интересует 👇",
+        reply_markup=MAIN_MENU
+    )
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
