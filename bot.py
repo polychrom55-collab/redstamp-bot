@@ -403,6 +403,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     elif data.startswith("canvas_") and not data == "canvases":
+        logging.info(f"Canvas handler triggered: {data}")
         sizes = {
             "canvas_20x30": ("20×30 см", 1652),
             "canvas_30x30": ("30×30 см", 1596),
@@ -431,9 +432,9 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         photo_id = CANVAS_PHOTOS.get(data)
         if photo_id:
-            await context.bot.send_photo(
+            await context.bot.send_document(
                 chat_id=query.message.chat_id,
-                photo=photo_id,
+                document=photo_id,
                 caption=caption,
                 reply_markup=keyboard
             )
