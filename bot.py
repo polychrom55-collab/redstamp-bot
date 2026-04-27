@@ -241,25 +241,33 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     elif data == "canvases":
-        await query.edit_message_text(
+        text = (
             "🖼 Холсты и звёздные карты\n\n"
             "Выберите размер — покажем пример и цену.\n\n"
-            "Вы можете загрузить любую свою фотографию — мы напечатаем холст именно с ней! 📸",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("20×30 см", callback_data="canvas_20x30"),
-                 InlineKeyboardButton("30×30 см", callback_data="canvas_30x30")],
-                [InlineKeyboardButton("30×40 см", callback_data="canvas_30x40"),
-                 InlineKeyboardButton("40×40 см", callback_data="canvas_40x40")],
-                [InlineKeyboardButton("40×50 см", callback_data="canvas_40x50"),
-                 InlineKeyboardButton("50×50 см", callback_data="canvas_50x50")],
-                [InlineKeyboardButton("40×60 см", callback_data="canvas_40x60"),
-                 InlineKeyboardButton("50×60 см", callback_data="canvas_50x60")],
-                [InlineKeyboardButton("60×80 см", callback_data="canvas_60x80"),
-                 InlineKeyboardButton("80×110 см", callback_data="canvas_80x110")],
-                [InlineKeyboardButton("🌟 Звёздная карта", callback_data="starmap")],
-                [InlineKeyboardButton("← Каталог", callback_data="catalog")],
-            ])
+            "Вы можете загрузить любую свою фотографию — мы напечатаем холст именно с ней! 📸"
         )
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("20×30 см", callback_data="canvas_20x30"),
+             InlineKeyboardButton("30×30 см", callback_data="canvas_30x30")],
+            [InlineKeyboardButton("30×40 см", callback_data="canvas_30x40"),
+             InlineKeyboardButton("40×40 см", callback_data="canvas_40x40")],
+            [InlineKeyboardButton("40×50 см", callback_data="canvas_40x50"),
+             InlineKeyboardButton("50×50 см", callback_data="canvas_50x50")],
+            [InlineKeyboardButton("40×60 см", callback_data="canvas_40x60"),
+             InlineKeyboardButton("50×60 см", callback_data="canvas_50x60")],
+            [InlineKeyboardButton("60×80 см", callback_data="canvas_60x80"),
+             InlineKeyboardButton("80×110 см", callback_data="canvas_80x110")],
+            [InlineKeyboardButton("🌟 Звёздная карта", callback_data="starmap")],
+            [InlineKeyboardButton("← Каталог", callback_data="catalog")],
+        ])
+        try:
+            await query.edit_message_text(text, reply_markup=keyboard)
+        except:
+            await context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text=text,
+                reply_markup=keyboard
+            )
 
     elif data.startswith("quick_"):
         user_id = query.from_user.id
@@ -442,26 +450,34 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(caption, reply_markup=keyboard)
 
     elif data == "starmap":
-        await query.edit_message_text(
+        text = (
             "🌟 Звёздная карта\n\n"
             "Карта звёздного неба над вами в момент предложения руки и сердца, "
             "первого поцелуя, рождения ребёнка или любой важной даты.\n\n"
             "Вы указываете дату, время и город — мы создаём персональную карту с вашей подписью.\n\n"
-            "Выберите размер:",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("20×30 см", callback_data="starmap_20x30"),
-                 InlineKeyboardButton("30×30 см", callback_data="starmap_30x30")],
-                [InlineKeyboardButton("30×40 см", callback_data="starmap_30x40"),
-                 InlineKeyboardButton("40×40 см", callback_data="starmap_40x40")],
-                [InlineKeyboardButton("40×50 см", callback_data="starmap_40x50"),
-                 InlineKeyboardButton("50×50 см", callback_data="starmap_50x50")],
-                [InlineKeyboardButton("40×60 см", callback_data="starmap_40x60"),
-                 InlineKeyboardButton("50×60 см", callback_data="starmap_50x60")],
-                [InlineKeyboardButton("60×80 см", callback_data="starmap_60x80"),
-                 InlineKeyboardButton("80×110 см", callback_data="starmap_80x110")],
-                [InlineKeyboardButton("← Назад", callback_data="canvases")],
-            ])
+            "Выберите размер:"
         )
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("20×30 см", callback_data="starmap_20x30"),
+             InlineKeyboardButton("30×30 см", callback_data="starmap_30x30")],
+            [InlineKeyboardButton("30×40 см", callback_data="starmap_30x40"),
+             InlineKeyboardButton("40×40 см", callback_data="starmap_40x40")],
+            [InlineKeyboardButton("40×50 см", callback_data="starmap_40x50"),
+             InlineKeyboardButton("50×50 см", callback_data="starmap_50x50")],
+            [InlineKeyboardButton("40×60 см", callback_data="starmap_40x60"),
+             InlineKeyboardButton("50×60 см", callback_data="starmap_50x60")],
+            [InlineKeyboardButton("60×80 см", callback_data="starmap_60x80"),
+             InlineKeyboardButton("80×110 см", callback_data="starmap_80x110")],
+            [InlineKeyboardButton("← Назад", callback_data="canvases")],
+        ])
+        try:
+            await query.edit_message_text(text, reply_markup=keyboard)
+        except:
+            await context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text=text,
+                reply_markup=keyboard
+            )
 
     elif data.startswith("starmap_"):
         sizes = {
@@ -477,19 +493,26 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "starmap_80x110": ("80×110 см", 6020),
         }
         size_name, price = sizes[data]
-        # Получаем аналогичный размер для холста
         canvas_key = data.replace("starmap_", "canvas_")
-        await query.edit_message_text(
+        text = (
             f"🌟 Звёздная карта {size_name}\n\n"
             f"💰 Цена: {price:,} руб\n\n"
             f"Укажите дату, время и город — и мы создадим карту звёздного неба именно для вашего момента ✨\n\n"
-            f"Срок изготовления: до 3 дней.",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("💬 Заказать", url="https://t.me/redstamp55")],
-                [InlineKeyboardButton("🖼 Сделать обычным холстом", callback_data=canvas_key)],
-                [InlineKeyboardButton("← Назад к размерам", callback_data="starmap")],
-            ])
+            f"Срок изготовления: до 3 дней."
         )
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("💬 Заказать", url="https://t.me/redstamp55")],
+            [InlineKeyboardButton("🖼 Сделать обычным холстом", callback_data=canvas_key)],
+            [InlineKeyboardButton("← Назад к размерам", callback_data="starmap")],
+        ])
+        try:
+            await query.edit_message_text(text, reply_markup=keyboard)
+        except:
+            await context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text=text,
+                reply_markup=keyboard
+            )
 
     elif data == "gifts":
         await query.edit_message_text(
