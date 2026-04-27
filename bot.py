@@ -403,7 +403,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     elif data.startswith("canvas_") and not data == "canvases":
-        await query.answer()
         sizes = {
             "canvas_20x30": ("20×30 см", 1652),
             "canvas_30x30": ("30×30 см", 1596),
